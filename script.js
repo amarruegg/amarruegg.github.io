@@ -42,6 +42,10 @@ const gestureOutput = document.getElementById("gesture_output");
 function hasGetUserMedia() {
     return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }
+function stopSound() {
+    audio.pause();
+    soundPlaying = false;
+}
 // If webcam supported, add event listener to button for when user
 // wants to activate it.
 if (hasGetUserMedia()) {
@@ -124,4 +128,21 @@ async function predictWebcam() {
     if (webcamRunning === true) {
         window.requestAnimationFrame(predictWebcam);
     }
+}
+
+// Add this code to play sound when "touching" gesture is recognized for 1 second
+let touchingStartTime = 0;
+let soundPlaying = false;
+const audio = new Audio('path_to_sound_file.mp3');
+
+if (results.gestures.length > 0 && results.gestures[0][0].categoryName === "touching") {
+    if (!touchingStartTime) {
+        touchingStartTime = Date.now();
+    } else if (Date.now() - touchingStartTime >= 1000 && !soundPlaying) {
+        audio.play();
+        soundPlaying = true;
+    }
+} else {
+    touchingStartTime = 0;
+    soundPlaying = false;
 }
