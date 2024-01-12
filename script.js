@@ -106,6 +106,35 @@ const video = document.getElementById("webcam");
 const canvasElement = document.getElementById("output_canvas");
 const canvasCtx = canvasElement.getContext("2d");
 const gestureOutput = document.getElementById("gesture_output");
+
+//alarm sound
+
+let touchingGestureStartTime = null;
+let soundPlaying = false;
+let sound = new Audio('alarm.mp3'); 
+
+function playSound() {
+  sound.play();
+  soundPlaying = true;
+  document.getElementById('stopSoundButton').style.display = 'block';
+}
+
+function playSound() {
+  sound.play();
+  soundPlaying = true;
+  document.getElementById('stopSoundButton').style.display = 'block';
+}
+
+function stopSound() {
+  sound.pause();
+  sound.currentTime = 0;
+  soundPlaying = false;
+  document.getElementById('stopSoundButton').style.display = 'none';
+}
+
+//end alarm sound
+
+document.getElementById('stopSoundButton').addEventListener('click', stopSound);
 // Check if webcam access is supported.
 function hasGetUserMedia() {
     return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
@@ -188,6 +217,24 @@ async function predictWebcam() {
     else {
         gestureOutput.style.display = "none";
     }
+
+    //start alarm button code
+
+    if (results.gestures.length > 0) {
+        const categoryName = results.gestures[0][0].categoryName;
+        if (categoryName === 'touching') {
+          if (touchingGestureStartTime === null) {
+            touchingGestureStartTime = Date.now();
+          } else if (Date.now() - touchingGestureStartTime >= 1000 && !soundPlaying) {
+            playSound();
+          }
+        } else {
+          touchingGestureStartTime = null;
+        }
+      }
+
+    //end alarm button code
+
     // Call this function again to keep predicting when the browser is ready.
     if (webcamRunning === true) {
         window.requestAnimationFrame(predictWebcam);
