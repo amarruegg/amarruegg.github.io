@@ -124,25 +124,16 @@ async function predictWebcam() {
     else {
         gestureOutput.style.display = "none";
     }
-    // Call this function again to keep predicting when the browser is ready.
-    if (webcamRunning === true) {
-        window.requestAnimationFrame(predictWebcam);
-    }
-}
 
-// Add this code to play sound when "touching" gesture is recognized for 1 second
-let touchingStartTime = 0;
-let soundPlaying = false;
-const audio = new Audio('path_to_sound_file.mp3');
-
-if (results.gestures.length > 0 && results.gestures[0][0].categoryName === "touching") {
-    if (!touchingStartTime) {
-        touchingStartTime = Date.now();
-    } else if (Date.now() - touchingStartTime >= 1000 && !soundPlaying) {
-        audio.play();
-        soundPlaying = true;
+    if (results.gestures.length > 0 && results.gestures[0][0].categoryName === "touching") {
+        if (!touchingStartTime) {
+            touchingStartTime = Date.now();
+        } else if (Date.now() - touchingStartTime >= 1000 && !soundPlaying) {
+            audio.play();
+            soundPlaying = true;
+        }
+    } else {
+        touchingStartTime = 0;
+        soundPlaying = false;
     }
-} else {
-    touchingStartTime = 0;
-    soundPlaying = false;
 }
