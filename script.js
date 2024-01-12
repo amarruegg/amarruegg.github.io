@@ -42,10 +42,6 @@ const gestureOutput = document.getElementById("gesture_output");
 function hasGetUserMedia() {
     return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }
-function stopSound() {
-    audio.pause();
-    soundPlaying = false;
-}
 // If webcam supported, add event listener to button for when user
 // wants to activate it.
 if (hasGetUserMedia()) {
@@ -81,6 +77,9 @@ function enableCam(event) {
 }
 let lastVideoTime = -1;
 let results = undefined;
+let touchingStartTime = null; // Add this line
+let soundPlaying = false; // Add this line
+const audio = new Audio('alarm.mp3');
 async function predictWebcam() {
     const webcamElement = document.getElementById("webcam");
     // Now let's start detecting the stream.
@@ -92,6 +91,21 @@ async function predictWebcam() {
     if (video.currentTime !== lastVideoTime) {
         lastVideoTime = video.currentTime;
         results = gestureRecognizer.recognizeForVideo(video, nowInMs);
+    }
+    if (results.gestures.length > 0 && results.gestures[0][0].categoryName === "touching") {
+        if (!touchingStartTime) {
+            touchingStartTime = Date.now();
+        } else if (Date.now() - touchingStartTime >= 1000 && !soundPlaying) {
+            audio.play();
+            soundPlaying = true;
+        }
+    } else {
+        touchingStartTime = null;
+        if (soundPlaying) {
+            audio.pause(); // Stop the sound if the gesture is not "touching"
+            audio.currentTime = 0; // Reset audio playback to the start
+            soundPlaying = false;
+        }
     }
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
@@ -124,16 +138,21 @@ async function predictWebcam() {
     else {
         gestureOutput.style.display = "none";
     }
-
-    if (results.gestures.length > 0 && results.gestures[0][0].categoryName === "touching") {
-        if (!touchingStartTime) {
-            touchingStartTime = Date.now();
-        } else if (Date.now() - touchingStartTime >= 1000 && !soundPlaying) {
-            audio.play();
-            soundPlaying = true;
-        }
-    } else {
-        touchingStartTime = 0;
-        soundPlaying = false;
+    // Call this function again to keep predicting when the browser is ready.
+    if (webcamRunning === true) {
+        window.requestAnimationFrame(predictWebcam);
     }
+}
+
+// Add this code to create a stop button and append it to your page
+const stopButton = document.createElement("button");
+stopButton.innerText = "Stop";
+stopButton.addEventListener("click", stopSound);
+document.body.appendChild(stopButton); // Append the button to the body or another element of your choice
+
+// Add this function to stop the sound
+function stopSound() {
+    audio.pause();
+    audio.currentTime = 0; // Reset audio playback to the start
+    soundPlaying = false;
 }
