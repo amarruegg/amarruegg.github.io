@@ -213,27 +213,20 @@ async function predictWebcam() {
         const categoryScore = parseFloat(results.gestures[0][0].score * 100).toFixed(2);
         const handedness = results.handednesses[0][0].displayName;
         gestureOutput.innerText = `GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore} %\n Handedness: ${handedness}`;
+
+        if (categoryName === 'touching') {
+            if (touchingGestureStartTime === null) {
+                touchingGestureStartTime = Date.now();
+            } else if (Date.now() - touchingGestureStartTime >= 1000 && !soundPlaying) {
+                playSound();
+            }
+        } else {
+            touchingGestureStartTime = null;
+        }
     }
     else {
         gestureOutput.style.display = "none";
     }
-
-    //start alarm button code
-
-    if (results.gestures.length > 0) {
-        const categoryName = results.gestures[0][0].categoryName;
-        if (categoryName === 'touching') {
-          if (touchingGestureStartTime === null) {
-            touchingGestureStartTime = Date.now();
-          } else if (Date.now() - touchingGestureStartTime >= 1000 && !soundPlaying) {
-            playSound();
-          }
-        } else {
-          touchingGestureStartTime = null;
-        }
-      }
-
-    //end alarm button code
 
     // Call this function again to keep predicting when the browser is ready.
     if (webcamRunning === true) {
