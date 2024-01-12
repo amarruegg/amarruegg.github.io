@@ -24,11 +24,11 @@ limitations under the License. -->
 <link href="style.css" rel="stylesheet">
 <script src="script.js"></script>
 
-<h1>Recognize hand gestures using the MediaPipe HandGestureRecognizer task</h1>
+<h1>Compulsive Habit Readjustment</h1>
 
 <section id="demos">
 
-  <h2><br>Demo: Webcam continuous hand gesture detection</h2>
+  <h2><br>test</h2>
   <p>Use your hand to make gestures in front of the camera to get gesture classification. </br>Click <b>enable webcam</b> below and grant access to the webcam if prompted.</p>
 
   <div id="liveView" class="videoView">
@@ -36,15 +36,17 @@ limitations under the License. -->
       <span class="mdc-button__ripple"></span>
       <span class="mdc-button__label">ENABLE WEBCAM</span>
     </button>
-    <button id="stopSoundButton" class="mdc-button mdc-button--raised" style="display: none;">
-      <span class="mdc-button__ripple"></span>
-      <span class="mdc-button__label">STOP</span>
-    </button>
     <div style="position: relative;">
       <video id="webcam" autoplay playsinline></video>
       <canvas class="output_canvas" id="output_canvas" width="1280" height="720" style="position: absolute; left: 0px; top: 0px;"></canvas>
       <p id='gesture_output' class="output">
     </div>
+  </div>
+  <div>
+    <button id="stopSoundButton" class="mdc-button mdc-button--raised" style="display: none;" onclick="stopSound()">
+      <span class="mdc-button__ripple"></span>
+      <span class="mdc-button__label">STOP</span>
+    </button>
   </div>
 </section>
 <!-- partial -->
