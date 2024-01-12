@@ -32,41 +32,80 @@ const createGestureRecognizer = async () => {
 };
 createGestureRecognizer();
 /********************************************************************
+// Demo 1: Detect hand gestures in images
+********************************************************************/
+const imageContainers = document.getElementsByClassName("detectOnClick");
+for (let i = 0; i < imageContainers.length; i++) {
+    imageContainers[i].children[0].addEventListener("click", handleClick);
+}
+async function handleClick(event) {
+    if (!gestureRecognizer) {
+        alert("Please wait for gestureRecognizer to load");
+        return;
+    }
+    if (runningMode === "VIDEO") {
+        runningMode = "IMAGE";
+        await gestureRecognizer.setOptions({ runningMode: "IMAGE" });
+    }
+    // Remove all previous landmarks
+    const allCanvas = event.target.parentNode.getElementsByClassName("canvas");
+    for (var i = allCanvas.length - 1; i >= 0; i--) {
+        const n = allCanvas[i];
+        n.parentNode.removeChild(n);
+    }
+    const results = gestureRecognizer.recognize(event.target);
+    // View results in the console to see their format
+    console.log(results);
+    if (results.gestures.length > 0) {
+        const p = event.target.parentNode.childNodes[3];
+        p.setAttribute("class", "info");
+        const categoryName = results.gestures[0][0].categoryName;
+        const categoryScore = parseFloat(results.gestures[0][0].score * 100).toFixed(2);
+        const handedness = results.handednesses[0][0].displayName;
+        p.innerText = `GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore}%\n Handedness: ${handedness}`;
+        p.style =
+            "left: 0px;" +
+                "top: " +
+                event.target.height +
+                "px; " +
+                "width: " +
+                (event.target.width - 10) +
+                "px;";
+        const canvas = document.createElement("canvas");
+        canvas.setAttribute("class", "canvas");
+        canvas.setAttribute("width", event.target.naturalWidth + "px");
+        canvas.setAttribute("height", event.target.naturalHeight + "px");
+        canvas.style =
+            "left: 0px;" +
+                "top: 0px;" +
+                "width: " +
+                event.target.width +
+                "px;" +
+                "height: " +
+                event.target.height +
+                "px;";
+        event.target.parentNode.appendChild(canvas);
+        const canvasCtx = canvas.getContext("2d");
+        const drawingUtils = new DrawingUtils(canvasCtx);
+        for (const landmarks of results.landmarks) {
+            drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, {
+                color: "#00FF00",
+                lineWidth: 5
+            });
+            drawingUtils.drawLandmarks(landmarks, {
+                color: "#FF0000",
+                lineWidth: 1
+            });
+        }
+    }
+}
+/********************************************************************
 // Demo 2: Continuously grab image from webcam stream and detect it.
 ********************************************************************/
 const video = document.getElementById("webcam");
 const canvasElement = document.getElementById("output_canvas");
 const canvasCtx = canvasElement.getContext("2d");
 const gestureOutput = document.getElementById("gesture_output");
-
-//alarm sound
-
-let touchingGestureStartTime = null;
-let soundPlaying = false;
-let sound = new Audio('alarm.mp3'); 
-
-function playSound() {
-  sound.play();
-  soundPlaying = true;
-  document.getElementById('stopSoundButton').style.display = 'block';
-}
-
-function playSound() {
-  sound.play();
-  soundPlaying = true;
-  document.getElementById('stopSoundButton').style.display = 'block';
-}
-
-function stopSound() {
-  sound.pause();
-  sound.currentTime = 0;
-  soundPlaying = false;
-  document.getElementById('stopSoundButton').style.display = 'none';
-}
-
-//end alarm sound
-
-document.getElementById('stopSoundButton').addEventListener('click', stopSound);
 // Check if webcam access is supported.
 function hasGetUserMedia() {
     return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
@@ -145,21 +184,10 @@ async function predictWebcam() {
         const categoryScore = parseFloat(results.gestures[0][0].score * 100).toFixed(2);
         const handedness = results.handednesses[0][0].displayName;
         gestureOutput.innerText = `GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore} %\n Handedness: ${handedness}`;
-
-        if (categoryName === 'touching') {
-            if (touchingGestureStartTime === null) {
-                touchingGestureStartTime = Date.now();
-            } else if (Date.now() - touchingGestureStartTime >= 1000 && !soundPlaying) {
-                playSound();
-            }
-        } else {
-            touchingGestureStartTime = null;
-        }
     }
     else {
         gestureOutput.style.display = "none";
     }
-
     // Call this function again to keep predicting when the browser is ready.
     if (webcamRunning === true) {
         window.requestAnimationFrame(predictWebcam);
