@@ -160,9 +160,10 @@ function stopSound() {
 // Check if Picture-in-Picture is supported
 if ('pictureInPictureEnabled' in document) {
     const pipButton = document.createElement("button");
-    pipButton.innerText = "Toggle Picture-in-Picture";
+    pipButton.innerText = "Minimize Video";
     pipButton.addEventListener("click", togglePiP);
-    document.body.appendChild(pipButton); // Append the button to the body or another element of your choice
+    const demosSection = document.getElementById("demos"); // Get the demos section
+    demosSection.appendChild(pipButton); // Append the button to the demos section
 } else {
     console.error("Picture-in-Picture is not supported by this browser.");
 }
