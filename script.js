@@ -156,3 +156,29 @@ function stopSound() {
     audio.currentTime = 0; // Reset audio playback to the start
     soundPlaying = false;
 }
+
+// Check if Picture-in-Picture is supported
+if ('pictureInPictureEnabled' in document) {
+    const pipButton = document.createElement("button");
+    pipButton.innerText = "Toggle Picture-in-Picture";
+    pipButton.addEventListener("click", togglePiP);
+    document.body.appendChild(pipButton); // Append the button to the body or another element of your choice
+} else {
+    console.error("Picture-in-Picture is not supported by this browser.");
+}
+
+// Function to toggle Picture-in-Picture
+async function togglePiP() {
+    try {
+        if (document.pictureInPictureElement) {
+            await document.exitPictureInPicture();
+        } else {
+            const videoElement = document.getElementById("webcam");
+            if (videoElement) {
+                await videoElement.requestPictureInPicture();
+            }
+        }
+    } catch (error) {
+        console.error("Error trying to toggle Picture-in-Picture:", error);
+    }
+}
