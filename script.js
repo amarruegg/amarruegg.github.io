@@ -72,19 +72,7 @@ function enableCam(event) {
     // Activate the webcam stream.
     navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
         video.srcObject = stream;
-        video.addEventListener("loadeddata", function() {
-            // Append the pipButton here, inside the 'loadeddata' event listener
-            if ('pictureInPictureEnabled' in document) {
-                const pipButton = document.createElement("button");
-                pipButton.innerText = "Minimize Video";
-                pipButton.addEventListener("click", togglePiP);
-                const demosSection = document.getElementById("demos"); // Get the demos section
-                demosSection.appendChild(pipButton); // Append the button to the demos section
-            } else {
-                console.error("Picture-in-Picture is not supported by this browser.");
-            }
-            predictWebcam(); // Start the prediction function or any other logic you need
-        });
+        video.addEventListener("loadeddata", predictWebcam);
     });
 }
 let lastVideoTime = -1;
@@ -167,6 +155,17 @@ function stopSound() {
     audio.pause();
     audio.currentTime = 0; // Reset audio playback to the start
     soundPlaying = false;
+}
+
+// Check if Picture-in-Picture is supported
+if ('pictureInPictureEnabled' in document) {
+    const pipButton = document.createElement("button");
+    pipButton.innerText = "Minimize Video";
+    pipButton.addEventListener("click", togglePiP);
+    const demosSection = document.getElementById("demos"); // Get the demos section
+    demosSection.appendChild(pipButton); // Append the button to the demos section
+} else {
+    console.error("Picture-in-Picture is not supported by this browser.");
 }
 
 // Function to toggle Picture-in-Picture
