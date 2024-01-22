@@ -74,7 +74,20 @@ function enableCam(event) {
         video.srcObject = stream;
         video.addEventListener("loadeddata", predictWebcam);
     });
-}
+    navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
+        video.srcObject = stream;
+        video.addEventListener("loadeddata", function() {
+          // Append the enableWebcamButton to the #demos section
+          enableWebcamButton.style.position = 'relative';
+          enableWebcamButton.style.top = 'initial';
+          enableWebcamButton.style.left = 'initial';
+          enableWebcamButton.style.transform = 'initial';
+          enableWebcamButton.style.zIndex = 'initial';
+          document.getElementById("demos").appendChild(enableWebcamButton);
+          predictWebcam();
+        });
+      });
+    }
 let lastVideoTime = -1;
 let results = undefined;
 let touchingStartTime = null; // Add this line
