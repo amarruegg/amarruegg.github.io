@@ -71,9 +71,18 @@ function enableCam(event) {
     };
     // Activate the webcam stream.
     navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
-        video.srcObject = stream;
-        video.addEventListener("loadeddata", predictWebcam);
+    video.srcObject = stream;
+    video.addEventListener("loadeddata", function() {
+      // Move the enableWebcamButton below the video
+      enableWebcamButton.style.position = 'relative';
+      enableWebcamButton.style.top = '0';
+      enableWebcamButton.style.left = '0';
+      enableWebcamButton.style.transform = 'none';
+      enableWebcamButton.style.zIndex = '0';
+      document.getElementById("liveView").appendChild(enableWebcamButton);
+      predictWebcam();
     });
+  });
 }
 let lastVideoTime = -1;
 let results = undefined;
