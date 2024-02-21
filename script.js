@@ -11,6 +11,7 @@
 import { GestureRecognizer, FilesetResolver, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
 const demosSection = document.getElementById("demos");
 let gestureRecognizer;
+let faceLandmarker;
 let runningMode = "IMAGE";
 let enableWebcamButton;
 let webcamRunning = false;
@@ -44,7 +45,7 @@ const createFaceLandmarker = async () => {
         numFaces: 1
     });
     demosSection.classList.remove("invisible");
-}
+};
 createFaceLandmarker();
 /********************************************************************
 // Demo 2: Continuously grab image from webcam stream and detect it.
