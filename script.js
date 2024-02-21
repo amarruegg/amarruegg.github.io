@@ -133,13 +133,8 @@ async function predictWebcam() {
     let startTimeMs = performance.now();
     if (video.currentTime !== lastVideoTime) {
         lastVideoTime = video.currentTime;
-        //const gestureResults = await gestureRecognizer.recognizeForVideo(video, nowInMs);
-        //const faceLandmarkResults = await faceLandmarker.detectForVideo(video, startTimeMs);
-        // Now you have results from both models
-        results = gestureRecognizer.recognizeForVideo(video, nowInMs);
-        results = faceLandmarker.detectForVideo(video, startTimeMs);
-        gestureResults = gestureRecognizer.recognizeForVideo(video, nowInMs);
-        faceLandmarkResults = faceLandmarker.detectForVideo(video, startTimeMs);
+        gestureResults = await gestureRecognizer.recognizeForVideo(video, nowInMs);
+        faceLandmarkResults = await faceLandmarker.detectForVideo(video, startTimeMs);
     }
     if (gestureResults.gestures.length > 0 && gestureResults.gestures[0][0].categoryName === "touching") {
         if (!touchingStartTime) {
