@@ -58,7 +58,9 @@ section {
   margin: 2% 1%;
   cursor: pointer;
 }
-.videoView {
+
+.videoView,
+.blend-shapes {
 	position: relative;
 	width: 480px; /* Adjust as needed */
 	height: 360px; /* Adjust as needed */
