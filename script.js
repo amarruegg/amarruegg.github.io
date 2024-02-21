@@ -32,15 +32,15 @@ const createGestureRecognizer = async () => {
 };
 createGestureRecognizer();
 
-async function createFaceLandmarker() {
-    const filesetResolver = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
-    faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+const createFaceLandmarker = async () => {
+    const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
+    faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
         baseOptions: {
-            modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
+            modelAssetPath: "face_landmarker.task",
             delegate: "GPU"
         },
         outputFaceBlendshapes: true,
-        runningMode,
+        runningMode: runningMode,
         numFaces: 1
     });
     demosSection.classList.remove("invisible");
@@ -73,7 +73,7 @@ function enableCam(event) {
         return;
     }
     if (!faceLandmarker) {
-        console.log("Wait! faceLandmarker not loaded yet.");
+        alert("Wait! faceLandmarker not loaded yet");
         return;
     }
     if (webcamRunning === true) {
