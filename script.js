@@ -8,9 +8,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-import { GestureRecognizer, FilesetResolver, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
+import { GestureRecognizer, FilesetResolver, DrawingUtils, FaceLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
 const demosSection = document.getElementById("demos");
 let gestureRecognizer;
+let faceLandmarker;
 let runningMode = "IMAGE";
 let enableWebcamButton;
 let webcamRunning = false;
@@ -28,6 +29,7 @@ const createGestureRecognizer = async () => {
         },
         runningMode: runningMode
     });
+    faceLandmarker = new FaceLandmarker(vision);
     demosSection.classList.remove("invisible");
 };
 createGestureRecognizer();
@@ -53,8 +55,8 @@ else {
 }
 // Enable the live webcam view and start detection.
 function enableCam(event) {
-    if (!gestureRecognizer) {
-        alert("Please wait for gestureRecognizer to load");
+    if (!gestureRecognizer || !faceLandmarker) {
+        alert("Please wait for gestureRecognizer and faceLandmarker to load");
         return;
     }
     if (webcamRunning === true) {
@@ -76,26 +78,18 @@ function enableCam(event) {
     });
     navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
         video.srcObject = stream;
-        video.addEventListener("loadeddata", function() {
-          // Append the enableWebcamButton to the #demos section
-          enableWebcamButton.style.position = 'relative';
-          enableWebcamButton.style.top = 'initial';
-          enableWebcamButton.style.left = 'initial';
-          enableWebcamButton.style.transform = 'initial';
-          enableWebcamButton.style.zIndex = 'initial';
-          document.getElementById("demos").appendChild(enableWebcamButton);
-          predictWebcam();
-        });
-      });
-    }
+        video.addEventListener("loadeddata", predictWebcam);
+    });
+}
+
 let lastVideoTime = -1;
 let results = undefined;
-let touchingStartTime = null; // Add this line
-let soundPlaying = false; // Add this line
+let touchingStartTime = null;
+let soundPlaying = false;
 const audio = new Audio('alarm.mp3');
+
 async function predictWebcam() {
     const webcamElement = document.getElementById("webcam");
-    // Now let's start detecting the stream.
     if (runningMode === "IMAGE") {
         runningMode = "VIDEO";
         await gestureRecognizer.setOptions({ runningMode: "VIDEO" });
@@ -104,6 +98,11 @@ async function predictWebcam() {
     if (video.currentTime !== lastVideoTime) {
         lastVideoTime = video.currentTime;
         results = gestureRecognizer.recognizeForVideo(video, nowInMs);
+        const faceLandmarks = await faceLandmarker.estimateFaces(video);
+        if (faceLandmarks.length > 0) {
+            drawingUtils.drawConnectors(canvasCtx, faceLandmarks[0], FaceLandmarker.FACEMESH_TESSELATION, { color: "#C0C0C070", lineWidth: 1 });
+            drawingUtils.drawLandmarks(canvasCtx, faceLandmarks[0], { color: "#FF0000", lineWidth: 2 });
+        }
     }
     if (results.gestures.length > 0 && results.gestures[0][0].categoryName === "touching") {
         if (!touchingStartTime) {
