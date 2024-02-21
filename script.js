@@ -8,13 +8,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-import { GestureRecognizer, FilesetResolver, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
+import { GestureRecognizer, FilesetResolver, DrawingUtils, FaceLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
 const demosSection = document.getElementById("demos");
 let gestureRecognizer;
 let faceLandmarker;
 let runningMode = "IMAGE";
 let enableWebcamButton;
 let webcamRunning = false;
+const imageBlendShapes = document.getElementById("image-blend-shapes");
+const videoBlendShapes = document.getElementById("video-blend-shapes");
 const videoHeight = "360px";
 const videoWidth = "480px";
 // Before we can use HandLandmarker class we must wait for it to finish
