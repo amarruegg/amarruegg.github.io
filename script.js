@@ -61,20 +61,19 @@ function hasGetUserMedia() {
 // If webcam supported, add event listener to button for when user
 // wants to activate it.
 if (hasGetUserMedia()) {
-    enableWebcamButton = document.getElementById("webcamButton");
-    enableWebcamButton.addEventListener("click", enableCam);
+    // Use Promise.all to wait for both models to load before enabling the webcam
+    Promise.all([createGestureRecognizer(), createFaceLandmarker()]).then(() => {
+        enableWebcamButton = document.getElementById("webcamButton");
+        enableWebcamButton.addEventListener("click", enableCam);
+    });
 }
 else {
     console.warn("getUserMedia() is not supported by your browser");
 }
 // Enable the live webcam view and start detection.
 function enableCam(event) {
-    if (!gestureRecognizer) {
-        alert("Please wait for gestureRecognizer to load");
-        return;
-    }
-    if (!faceLandmarker) {
-        alert("Wait! faceLandmarker not loaded yet");
+    if (!gestureRecognizer || !faceLandmarker) {
+        alert("Please wait for gestureRecognizer and faceLandmarker to load");
         return;
     }
     if (webcamRunning === true) {
@@ -133,10 +132,13 @@ async function predictWebcam() {
     let startTimeMs = performance.now();
     if (video.currentTime !== lastVideoTime) {
         lastVideoTime = video.currentTime;
-        results = gestureRecognizer.recognizeForVideo(video, nowInMs);
-        results = faceLandmarker.detectForVideo(video, startTimeMs);
+        const gestureResults = await gestureRecognizer.recognizeForVideo(video, nowInMs);
+        const faceLandmarkResults = await faceLandmarker.detectForVideo(video, startTimeMs);
+        // Now you have results from both models
+        //results = gestureRecognizer.recognizeForVideo(video, nowInMs);
+        //results = faceLandmarker.detectForVideo(video, startTimeMs);
     }
-    if (results.gestures.length > 0 && results.gestures[0][0].categoryName === "touching") {
+    if (gestureResults.gestures.length > 0 && gestureResults.gestures[0][0].categoryName === "touching") {
         if (!touchingStartTime) {
             touchingStartTime = Date.now();
         } else if (Date.now() - touchingStartTime >= 1000 && !soundPlaying) {
@@ -158,8 +160,8 @@ async function predictWebcam() {
     webcamElement.style.height = videoHeight;
     canvasElement.style.width = videoWidth;
     webcamElement.style.width = videoWidth;
-    if (results.landmarks) {
-        for (const landmarks of results.landmarks) {
+    if (faceLandmarkResults.landmarks) {
+        for (const landmarks of faceLandmarkResults.landmarks) {
             drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, {
                 color: "#00FF00",
                 lineWidth: 5
@@ -171,19 +173,19 @@ async function predictWebcam() {
         }
     }
     canvasCtx.restore();
-    if (results.gestures.length > 0) {
+    if (gestureResults.gestures.length > 0) {
         gestureOutput.style.display = "block";
         gestureOutput.style.width = videoWidth;
-        const categoryName = results.gestures[0][0].categoryName;
-        const categoryScore = parseFloat(results.gestures[0][0].score * 100).toFixed(2);
-        const handedness = results.handednesses[0][0].displayName;
+        const categoryName = gestureResults.gestures[0][0].categoryName;
+        const categoryScore = parseFloat(gestureResults.gestures[0][0].score * 100).toFixed(2);
+        const handedness = gestureResults.handednesses[0][0].displayName;
         gestureOutput.innerText = `GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore} %\n Handedness: ${handedness}`;
     }
     else {
         gestureOutput.style.display = "none";
     }
-    if (results.faceLandmarks) {
-        for (const landmarks of results.faceLandmarks) {
+    if (faceLandmarkResults.faceLandmarks) {
+        for (const landmarks of faceLandmarkResults.faceLandmarks) {
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_TESSELATION, { color: "#C0C0C070", lineWidth: 1 });
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_RIGHT_EYE, { color: "#FF3030" });
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_RIGHT_EYEBROW, { color: "#FF3030" });
@@ -195,7 +197,7 @@ async function predictWebcam() {
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_LEFT_IRIS, { color: "#30FF30" });
         }
     }
-    drawBlendShapes(videoBlendShapes, results.faceBlendshapes);
+    drawBlendShapes(videoBlendShapes, faceLandmarkResults.faceBlendshapes);
     // Call this function again to keep predicting when the browser is ready.
     if (webcamRunning === true) {
         window.requestAnimationFrame(predictWebcam);
