@@ -63,11 +63,8 @@ function hasGetUserMedia() {
 // If webcam supported, add event listener to button for when user
 // wants to activate it.
 if (hasGetUserMedia()) {
-    // Use Promise.all to wait for both models to load before enabling the webcam
-    Promise.all([createGestureRecognizer(), createFaceLandmarker()]).then(() => {
-        enableWebcamButton = document.getElementById("webcamButton");
-        enableWebcamButton.addEventListener("click", enableCam);
-    });
+    enableWebcamButton = document.getElementById("webcamButton");
+    enableWebcamButton.addEventListener("click", enableCam);
 }
 else {
     console.warn("getUserMedia() is not supported by your browser");
