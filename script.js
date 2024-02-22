@@ -179,7 +179,7 @@ async function predictWebcam() {
         const categoryScore = parseFloat(gestureResults.gestures[0][0].score * 100).toFixed(2);
         const handedness = gestureResults.handednesses[0][0].displayName;
 
-        let overlayText = `GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore} %\n Handedness: ${handedness}`;
+        let overlayText;
 
         // Check if both "handIsTouchingFace" and "Touching" gestures are recognized
         if (categoryName === "touching" && handIsTouchingFace(gestureResults, faceLandmarkResults)) {
@@ -192,6 +192,7 @@ async function predictWebcam() {
                 soundPlaying = true;
             }
         } else {
+            overlayText = `GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore} %\n Handedness: ${handedness}`;
             touchingStartTime = null;
             if (soundPlaying) {
                 audio.pause();
@@ -229,32 +230,6 @@ async function predictWebcam() {
     }
 
     canvasCtx.restore();
-//Overlay text output on video when hands are recognized
-if (gestureResults.gestures.length > 0) {
-    const categoryName = gestureResults.gestures[0][0].categoryName;
-    const categoryScore = parseFloat(gestureResults.gestures[0][0].score * 100).toFixed(2);
-    const handedness = gestureResults.handednesses[0][0].displayName;
-
-    let overlayText = `GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore} %\n Handedness: ${handedness}`;
-
-    // Check if both "handIsTouchingFace" and "Touching" gestures are recognized
-    if (gestureResults.gestures[0][0].categoryName === "touching" && handIsTouchingFace(gestureResults, faceLandmarkResults)) {
-        overlayText = "GestureRecognizer: Touching FACE";
-        
-        if (!touchingStartTime) {
-            touchingStartTime = Date.now();
-        } else if (Date.now() - touchingStartTime >= 1000 && !soundPlaying) {
-            audio.play();
-            soundPlaying = true;
-        }
-    }
-
-    gestureOutput.style.display = "block";
-    gestureOutput.style.width = videoWidth;
-    gestureOutput.innerText = overlayText;
-} else {
-        gestureOutput.style.display = "none";
-    }
 
     if (faceLandmarkResults.faceLandmarks) {
         for (const landmarks of faceLandmarkResults.faceLandmarks) {
