@@ -183,7 +183,7 @@ async function predictWebcam() {
 
         // Check if both "handIsTouchingFace" and "Touching" gestures are recognized
         if (categoryName === "touching" && handIsTouchingFace(gestureResults, faceLandmarkResults)) {
-            overlayText = "GestureRecognizer: Touching FACE";
+            overlayText = "Gesture: Touching FACE";
 
             if (!touchingStartTime) {
                 touchingStartTime = Date.now();
@@ -192,7 +192,7 @@ async function predictWebcam() {
                 soundPlaying = true;
             }
         } else {
-            overlayText = `GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore} %\n Handedness: ${handedness}`;
+            overlayText = `Gesture: ${categoryName}\n Confidence: ${categoryScore} %\n Handedness: ${handedness}`;
             touchingStartTime = null;
             if (soundPlaying) {
                 audio.pause();
@@ -269,7 +269,7 @@ function drawBlendShapes(el, blendShapes) {
 
 // Add this code to create a stop button and append it to your page
 const stopButton = document.createElement("button");
-stopButton.innerText = "Stop";
+stopButton.innerText = "Stop audio";
 stopButton.addEventListener("click", stopSound);
 document.body.appendChild(stopButton); // Append the button to the body or another element of your choice
 
