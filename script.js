@@ -106,6 +106,27 @@ function enableCam(event) {
         });
       });
     }
+
+function handIsTouchingFace(gestureResults, faceLandmarkResults) {
+    // Calculate the bounding box of the face landmarks
+    let faceMinX = Infinity, faceMinY = Infinity, faceMaxX = -Infinity, faceMaxY = -Infinity;
+    for (const landmark of faceLandmarkResults.multiFaceLandmarks[0].landmark) {
+        faceMinX = Math.min(faceMinX, landmark.x);
+        faceMinY = Math.min(faceMinY, landmark.y);
+        faceMaxX = Math.max(faceMaxX, landmark.x);
+        faceMaxY = Math.max(faceMaxY, landmark.y);
+    }
+
+    // Check if any of the hand landmarks fall within the bounding box of the face landmarks
+    for (const landmark of gestureResults.multiHandLandmarks[0].landmark) {
+        if (landmark.x >= faceMinX && landmark.x <= faceMaxX && landmark.y >= faceMinY && landmark.y <= faceMaxY) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 let lastVideoTime = -1;
 let results = undefined;
 let faceLandmarkResults;
@@ -137,8 +158,13 @@ async function predictWebcam() {
         faceLandmarkResults = await faceLandmarker.detectForVideo(video, startTimeMs);
     }
     if (gestureResults.gestures.length > 0 && gestureResults.gestures[0][0].categoryName === "touching") {
-        if (handIsTouchingFace(gestureResults, faceLandmarkResults) && !soundPlaying) {
-            alert("Hand is touching face!");
+        if (handIsTouchingFace(gestureResults, faceLandmarkResults)) {
+            if (!touchingStartTime) {
+                touchingStartTime = Date.now();
+            } else if (Date.now() - touchingStartTime >= 1000 && !soundPlaying) {
+                audio.play();
+                soundPlaying = true;
+            }
         }
     } else {
         touchingStartTime = null;
@@ -197,26 +223,6 @@ async function predictWebcam() {
     if (webcamRunning === true) {
         window.requestAnimationFrame(predictWebcam);
     }
-}
-
-function handIsTouchingFace(gestureResults, faceLandmarkResults) {
-    // Calculate the bounding box of the face landmarks
-    let faceMinX = Infinity, faceMinY = Infinity, faceMaxX = -Infinity, faceMaxY = -Infinity;
-    for (const landmark of faceLandmarkResults.landmarks) {
-        faceMinX = Math.min(faceMinX, landmark.x);
-        faceMinY = Math.min(faceMinY, landmark.y);
-        faceMaxX = Math.max(faceMaxX, landmark.x);
-        faceMaxY = Math.max(faceMaxY, landmark.y);
-    }
-
-    // Check if any of the hand landmarks fall within the bounding box of the face landmarks
-    for (const landmark of gestureResults.landmarks) {
-        if (landmark.x >= faceMinX && landmark.x <= faceMaxX && landmark.y >= faceMinY && landmark.y <= faceMaxY) {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 function drawBlendShapes(el, blendShapes) {
