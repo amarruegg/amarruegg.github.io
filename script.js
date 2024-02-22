@@ -199,11 +199,11 @@ async function predictWebcam() {
     if (gestureResults.landmarks) {
         for (const landmarks of gestureResults.landmarks) {
             drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, {
-                color: "#00FF00",
-                lineWidth: 5
+                color: "#ffffff",
+                lineWidth: 4
             });
             drawingUtils.drawLandmarks(landmarks, {
-                color: "#FF0000",
+                color: "#9031d4",
                 lineWidth: 2
             });
         }
@@ -218,18 +218,6 @@ async function predictWebcam() {
         const categoryScore = parseFloat(gestureResults.gestures[0][0].score * 100).toFixed(2);
         const handedness = gestureResults.handednesses[0][0].displayName;
         gestureOutput.innerText = `GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore} %\n Handedness: ${handedness}`;
-    } else {
-        gestureOutput.style.display = "none";
-    }
-
-    if (gestureResults.gestures.length > 0 && gestureResults.gestures[0][0].categoryName === "touching") {
-        if (handIsTouchingFace(gestureResults, faceLandmarkResults)) {
-            gestureOutput.style.display = "block";
-            gestureOutput.style.width = videoWidth;
-            gestureOutput.innerText = "GestureRecognizer: Hand is touching face";
-        } else {
-            gestureOutput.style.display = "none";
-        }
     } else {
         gestureOutput.style.display = "none";
     }
