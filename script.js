@@ -199,23 +199,6 @@ async function predictWebcam() {
     }
 }
 
-function drawBlendShapes(el, blendShapes) {
-    if (!blendShapes.length) {
-        return;
-    }
-    console.log(blendShapes[0]);
-    let htmlMaker = "";
-    blendShapes[0].categories.map((shape) => {
-        htmlMaker += `
-      <li class="blend-shapes-item">
-        <span class="blend-shapes-label">${shape.displayName || shape.categoryName}</span>
-        <span class="blend-shapes-value" style="width: calc(${+shape.score * 100}% - 120px)">${(+shape.score).toFixed(4)}</span>
-      </li>
-    `;
-    });
-    el.innerHTML = htmlMaker;
-}
-
 function handIsTouchingFace(gestureResults, faceLandmarkResults) {
     // Calculate the bounding box of the face landmarks
     let faceMinX = Infinity, faceMinY = Infinity, faceMaxX = -Infinity, faceMaxY = -Infinity;
@@ -234,6 +217,23 @@ function handIsTouchingFace(gestureResults, faceLandmarkResults) {
     }
 
     return false;
+}
+
+function drawBlendShapes(el, blendShapes) {
+    if (!blendShapes.length) {
+        return;
+    }
+    console.log(blendShapes[0]);
+    let htmlMaker = "";
+    blendShapes[0].categories.map((shape) => {
+        htmlMaker += `
+      <li class="blend-shapes-item">
+        <span class="blend-shapes-label">${shape.displayName || shape.categoryName}</span>
+        <span class="blend-shapes-value" style="width: calc(${+shape.score * 100}% - 120px)">${(+shape.score).toFixed(4)}</span>
+      </li>
+    `;
+    });
+    el.innerHTML = htmlMaker;
 }
 
 // Add this code to create a stop button and append it to your page
