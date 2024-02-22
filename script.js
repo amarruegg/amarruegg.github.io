@@ -198,7 +198,7 @@ async function predictWebcam() {
 
     if (faceLandmarkResults.landmarks) {
         for (const landmarks of faceLandmarkResults.landmarks) {
-            drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, {
+            drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_CONNECTIONS, {
                 color: "#00FF00",
                 lineWidth: 5
             });
