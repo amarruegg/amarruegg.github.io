@@ -285,6 +285,8 @@ if ('pictureInPictureEnabled' in document) {
     const pipButton = document.createElement("button");
     pipButton.innerText = "Minimize Video";
     pipButton.addEventListener("click", togglePiP);
+    pipButton.style.marginTop = "20px";
+    pipButton.style.marginBottom = "20px";
     const demosSection = document.getElementById("demos"); // Get the demos section
     demosSection.appendChild(pipButton); // Append the button to the demos section
 } else {
