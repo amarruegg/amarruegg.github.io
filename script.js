@@ -87,28 +87,26 @@ function enableCam(event) {
     const constraints = {
         video: true
     };
-    // Activate the webcam stream.
-    navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
-        video.srcObject = stream;
-        video.addEventListener("loadeddata", predictWebcam);
+// Activate the webcam stream.
+navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
+    video.srcObject = stream;
+    video.addEventListener("loadeddata", predictWebcam);
+});
+
+navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
+    video.srcObject = stream;
+    video.addEventListener("loadeddata", function() {
+        enableWebcamButton.style.position = 'relative';
+        enableWebcamButton.style.top = 'initial';
+        enableWebcamButton.style.left = 'initial';
+        enableWebcamButton.style.transform = 'initial';
+        enableWebcamButton.style.zIndex = 'initial';
+        document.getElementById("demos").appendChild(enableWebcamButton);
+        predictWebcam();
     });
-    navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
-        video.srcObject = stream;
-        video.addEventListener("loadeddata", function() {
-          // Append the enableWebcamButton to the #demos section
-          enableWebcamButton.style.position = 'relative';
-          enableWebcamButton.style.top = 'initial';
-          enableWebcamButton.style.left = 'initial';
-          enableWebcamButton.style.transform = 'initial';
-          enableWebcamButton.style.zIndex = 'initial';
-          document.getElementById("demos").appendChild(enableWebcamButton);
-          predictWebcam();
-        });
-      });
-    }
+});
 
 function handIsTouchingFace(gestureResults, faceLandmarkResults) {
-    // Calculate the bounding box of the face landmarks
     let faceMinX = Infinity, faceMinY = Infinity, faceMaxX = -Infinity, faceMaxY = -Infinity;
     for (const landmark of faceLandmarkResults.multiFaceLandmarks[0].landmark) {
         faceMinX = Math.min(faceMinX, landmark.x);
@@ -117,7 +115,6 @@ function handIsTouchingFace(gestureResults, faceLandmarkResults) {
         faceMaxY = Math.max(faceMaxY, landmark.y);
     }
 
-    // Check if any of the hand landmarks fall within the bounding box of the face landmarks
     for (const landmark of gestureResults.multiHandLandmarks[0].landmark) {
         if (landmark.x >= faceMinX && landmark.x <= faceMaxX && landmark.y >= faceMinY && landmark.y <= faceMaxY) {
             return true;
@@ -131,10 +128,11 @@ let lastVideoTime = -1;
 let results = undefined;
 let faceLandmarkResults;
 let gestureResults;
-let touchingStartTime = null; // Add this line
-let soundPlaying = false; // Add this line
+let touchingStartTime = null;
+let soundPlaying = false;
 const drawingUtils = new DrawingUtils(canvasCtx);
 const audio = new Audio('alarm.mp3');
+
 async function predictWebcam() {
     const webcamElement = document.getElementById("webcam");
     const radio = video.videoHeight / video.videoWidth;
@@ -144,19 +142,22 @@ async function predictWebcam() {
     canvasElement.style.height = videoWidth * radio + "px";
     canvasElement.width = video.videoWidth;
     canvasElement.height = video.videoHeight;
-    // Now let's start detecting the stream.
+
     if (runningMode === "IMAGE") {
         runningMode = "VIDEO";
         await gestureRecognizer.setOptions({ runningMode: "VIDEO" });
         await faceLandmarker.setOptions({ runningMode: "VIDEO" });
     }
+
     let nowInMs = Date.now();
     let startTimeMs = performance.now();
+
     if (video.currentTime !== lastVideoTime) {
         lastVideoTime = video.currentTime;
         gestureResults = await gestureRecognizer.recognizeForVideo(video, nowInMs);
         faceLandmarkResults = await faceLandmarker.detectForVideo(video, startTimeMs);
     }
+
     if (gestureResults.gestures.length > 0 && gestureResults.gestures[0][0].categoryName === "touching") {
         if (handIsTouchingFace(gestureResults, faceLandmarkResults)) {
             if (!touchingStartTime) {
@@ -169,11 +170,12 @@ async function predictWebcam() {
     } else {
         touchingStartTime = null;
         if (soundPlaying) {
-            audio.pause(); // Stop the sound if the gesture is not "touching"
-            audio.currentTime = 0; // Reset audio playback to the start
+            audio.pause();
+            audio.currentTime = 0;
             soundPlaying = false;
         }
     }
+
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     const drawingUtils = new DrawingUtils(canvasCtx);
@@ -181,6 +183,7 @@ async function predictWebcam() {
     webcamElement.style.height = videoHeight;
     canvasElement.style.width = videoWidth;
     webcamElement.style.width = videoWidth;
+
     if (faceLandmarkResults.landmarks) {
         for (const landmarks of faceLandmarkResults.landmarks) {
             drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, {
@@ -193,7 +196,9 @@ async function predictWebcam() {
             });
         }
     }
+
     canvasCtx.restore();
+
     if (gestureResults.gestures.length > 0) {
         gestureOutput.style.display = "block";
         gestureOutput.style.width = videoWidth;
@@ -201,10 +206,10 @@ async function predictWebcam() {
         const categoryScore = parseFloat(gestureResults.gestures[0][0].score * 100).toFixed(2);
         const handedness = gestureResults.handednesses[0][0].displayName;
         gestureOutput.innerText = `GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore} %\n Handedness: ${handedness}`;
-    }
-    else {
+    } else {
         gestureOutput.style.display = "none";
     }
+
     if (faceLandmarkResults.faceLandmarks) {
         for (const landmarks of faceLandmarkResults.faceLandmarks) {
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_TESSELATION, { color: "#C0C0C070", lineWidth: 1 });
@@ -218,11 +223,10 @@ async function predictWebcam() {
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_LEFT_IRIS, { color: "#30FF30" });
         }
     }
-    drawBlendShapes(videoBlendShapes, faceLandmarkResults.faceBlendshapes);
+
     // Call this function again to keep predicting when the browser is ready.
-    if (webcamRunning === true) {
-        window.requestAnimationFrame(predictWebcam);
-    }
+    window.requestAnimationFrame(predictWebcam);
+}
 }
 
 function drawBlendShapes(el, blendShapes) {
