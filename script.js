@@ -112,28 +112,32 @@ function handIsTouchingFace(gestureResults, faceLandmarkResults) {
         return false;
     }
 
-    // Calculate the bounding box of the face landmarks
-    let faceMinX = Infinity, faceMinY = Infinity, faceMaxX = -Infinity, faceMaxY = -Infinity;
-    for (const landmark of faceLandmarkResults.multiFaceLandmarks[0].landmark) {
-        faceMinX = Math.min(faceMinX, landmark.x);
-        faceMinY = Math.min(faceMinY, landmark.y);
-        faceMaxX = Math.max(faceMaxX, landmark.x);
-        faceMaxY = Math.max(faceMaxY, landmark.y);
-    }
-
     // Check if the necessary objects exist
     if (!gestureResults.multiHandLandmarks || !gestureResults.multiHandLandmarks[0]) {
         return false;
     }
 
-    // Check if any of the hand landmarks fall within the bounding box of the face landmarks
-    for (const landmark of gestureResults.multiHandLandmarks[0].landmark) {
-        if (landmark.x >= faceMinX && landmark.x <= faceMaxX && landmark.y >= faceMinY && landmark.y <= faceMaxY) {
-            return true;
+    const handLandmarks = gestureResults.multiHandLandmarks[0].landmark;
+    const faceLandmarks = faceLandmarkResults.multiFaceLandmarks[0].landmark;
+
+    // Define a threshold for proximity (adjust as needed)
+    const proximityThreshold = 0.05; // Example threshold, adjust as needed
+
+    // Check if any hand landmark is close to any face landmark
+    for (const handLandmark of handLandmarks) {
+        for (const faceLandmark of faceLandmarks) {
+            const distance = Math.sqrt(
+                Math.pow(handLandmark.x - faceLandmark.x, 2) +
+                Math.pow(handLandmark.y - faceLandmark.y, 2)
+            );
+
+            if (distance < proximityThreshold) {
+                return true; // Hand is close to face, consider it as touching
+            }
         }
     }
 
-    return false;
+    return false; // No hand landmark is close to any face landmark
 }
 
 let lastVideoTime = -1;
