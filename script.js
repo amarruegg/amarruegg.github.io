@@ -231,25 +231,8 @@ async function predictWebcam() {
 
     canvasCtx.restore();
 
-    function getBoundingBox(landmarks) {
-        const xs = landmarks.map((point) => point.x);
-        const ys = landmarks.map((point) => point.y);
-    
-        const minX = Math.min(...xs);
-        const minY = Math.min(...ys);
-        const maxX = Math.max(...xs);
-        const maxY = Math.max(...ys);
-    
-        return {
-            topLeft: { x: minX, y: minY },
-            bottomRight: { x: maxX, y: maxY },
-        };
-    }
-
     if (faceLandmarkResults.faceLandmarks) {
         for (const landmarks of faceLandmarkResults.faceLandmarks) {
-            const boundingBox = getBoundingBox(landmarks);
-            drawingUtils.drawBoundingBox(boundingBox, { color: "#00FF00", lineWidth: 2 });
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_TESSELATION, { color: "#C0C0C070", lineWidth: 1 });
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_RIGHT_EYE, { color: "#FF3030" });
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_RIGHT_EYEBROW, { color: "#FF3030" });
@@ -259,6 +242,7 @@ async function predictWebcam() {
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_LIPS, { color: "#E0E0E0" });
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_RIGHT_IRIS, { color: "#FF3030" });
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_LEFT_IRIS, { color: "#30FF30" });
+            drawingUtils.drawBoundingBox(boundingBox, { color: "#30FF30" });
         }
     }
 
