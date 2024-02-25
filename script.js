@@ -226,6 +226,10 @@ async function predictWebcam() {
                 color: "#9031d4",
                 lineWidth: 2
             });
+            drawingUtils.drawBoundingBox(boundingBox, { 
+                color: "#30FF30",
+                lineWidth: 2
+            });
         }
     }
 
@@ -242,7 +246,6 @@ async function predictWebcam() {
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_LIPS, { color: "#E0E0E0" });
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_RIGHT_IRIS, { color: "#FF3030" });
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_LEFT_IRIS, { color: "#30FF30" });
-            drawingUtils.drawBoundingBox(boundingBox, { color: "#30FF30" });
         }
     }
 
