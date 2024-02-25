@@ -31,9 +31,7 @@ const createGestureRecognizer = async () => {
     demosSection.classList.remove("invisible");
 };
 createGestureRecognizer();
-/********************************************************************
-// Demo 2: Continuously grab image from webcam stream and detect it.
-********************************************************************/
+
 const video = document.getElementById("webcam");
 const canvasElement = document.getElementById("output_canvas");
 const canvasCtx = canvasElement.getContext("2d");
@@ -88,6 +86,21 @@ function enableCam(event) {
         });
       });
     }
+
+    //function to send signal to WiFi relay
+    function sendSignalToRelay() {
+        fetch('http://192.168.67.221/cm?cmnd=POWER1%20TOGGLE', {
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data); // Log the response from Tasmota
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
 let lastVideoTime = -1;
 let results = undefined;
 let touchingStartTime = null; // Add this line
@@ -110,6 +123,7 @@ async function predictWebcam() {
             touchingStartTime = Date.now();
         } else if (Date.now() - touchingStartTime >= 1000 && !soundPlaying) {
             audio.play();
+            sendSignalToRelay();
             soundPlaying = true;
         }
     } else {
