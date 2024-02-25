@@ -242,8 +242,18 @@ async function predictWebcam() {
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_LIPS, { color: "#E0E0E0" });
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_RIGHT_IRIS, { color: "#FF3030" });
             drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_LEFT_IRIS, { color: "#30FF30" });
-        }
+        // Code to draw the bounding box
+        const minX = Math.min(...landmarks.map(p => p.x));
+        const minY = Math.min(...landmarks.map(p => p.y));
+        const maxX = Math.max(...landmarks.map(p => p.x));
+        const maxY = Math.max(...landmarks.map(p => p.y));
+
+        canvasCtx.beginPath();
+        canvasCtx.rect(minX, minY, maxX - minX, maxY - minY);
+        canvasCtx.strokeStyle = 'red';
+        canvasCtx.stroke();
     }
+}
 
     // Call this function again to keep predicting when the browser is ready.
     window.requestAnimationFrame(predictWebcam);
