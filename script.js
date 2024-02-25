@@ -226,10 +226,6 @@ async function predictWebcam() {
                 color: "#9031d4",
                 lineWidth: 2
             });
-            drawingUtils.drawBoundingBox(boundingBox, { 
-                color: "#30FF30",
-                lineWidth: 2
-            });
         }
     }
 
