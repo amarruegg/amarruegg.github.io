@@ -12,13 +12,13 @@
         <textarea id="input-text" placeholder="Enter your text here"></textarea>
         <button type="submit">Submit</button>
     </form>
-    <div id="output"></div>
+    <div id="output" style="background-color: aqua;"></div>
 
     <script>
         document.getElementById('openai-form').addEventListener('submit', function(event) {
             event.preventDefault();
             var text = document.getElementById('input-text').value;
-            fetch('https://main.dkn2dflxbzim9.amplifyapp.com/', {
+            fetch('https://main.dkn2dflxbzim9.amplifyapp.com/openai.html', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
