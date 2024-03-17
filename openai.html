@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OpenAI Playground</title>
+    <style>
+        /* Add your CSS here */
+    </style>
+</head>
+<body>
+    <h1>OpenAI Playground</h1>
+    <form id="openai-form">
+        <textarea id="input-text" placeholder="Enter your text here"></textarea>
+        <button type="submit">Submit</button>
+    </form>
+    <div id="output"></div>
+
+    <script>
+        document.getElementById('openai-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            var text = document.getElementById('input-text').value;
+            fetch('/api/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    'prompt': text,
+                    'max_tokens': 60
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('output').innerText = data;
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    </script>
+</body>
+</html>
