@@ -28,12 +28,12 @@
                     'max_tokens': 60
                 })
             })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('output').innerText = data;
+            .then(response => response.text())  // <-- change this line
+            .then(text => {
+                console.log(text);  // <-- change this line
             })
             .catch(error => console.error('Error:', error));
-        });
+                    });
     </script>
 </body>
 </html>
