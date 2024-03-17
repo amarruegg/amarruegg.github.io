@@ -18,7 +18,7 @@
         document.getElementById('openai-form').addEventListener('submit', function(event) {
             event.preventDefault();
             var text = document.getElementById('input-text').value;
-            fetch('/api/completions', {
+            fetch('https://main.dkn2dflxbzim9.amplifyapp.com/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
