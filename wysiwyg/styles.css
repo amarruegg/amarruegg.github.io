@@ -1,5 +1,5 @@
 .background {
-  background-color: #f6f6f6;
+  background-color: #121212;
   padding: 20px;
   border-radius: 10px;
 }
@@ -13,13 +13,13 @@
   flex-direction: column;
   justify-content: top;
   margin-right: 20px; /* Add some space between the tiles and the editor */
+  margin-top: 20px;
 }
 
 .editor-container {
   position: relative;
-  background-color: #FFFFFF;
+  background-color: #ffffff;
   min-height: 300px;
-  border: 1px solid #ccc;
   margin-top: 14px;
   margin-right: auto;
   margin-left: auto;
@@ -69,11 +69,10 @@
 }
 
 .tile {
-  border: 1px solid #ccc;
   padding: 10px;
   margin: 10px;
   cursor: move;
-  background: linear-gradient(45deg, #3460db, #c122ff);
+  background: #2f3142;
   color: #fff;
   transition: transform 0.3s ease;
   position: relative;
@@ -115,7 +114,7 @@
   justify-content: center;
   align-items: center;
   height: 80px;
-  background-color: #F5F5F5;
+  background-color: #121212;
   box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
 }
@@ -130,12 +129,13 @@
 
 #editor:empty:before {
   content: "Drop it like it's hot";
-  color: #888;
+  color: #696969;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100%;
-  margin-top: 125px;
+  text-align: center;
+  vertical-align: middle;
+  padding-top: 130px;
 }
 
 .button-container {
@@ -160,8 +160,7 @@
   font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
   background-size: 200% auto;
-  background-image: linear-gradient(45deg, #3460db 0%, #c122ff 50%, #3460db 100%);
-  animation: gradient 13s linear infinite;
+  background-color: #6f009b;
 }
 
 #exportButton:hover, #importButton:hover {
@@ -214,7 +213,7 @@
 
 /* Adds glowing box around dropped tile */
 .glow-on-hover:hover {
-  box-shadow: 0 0 10px #c122ff;
+  box-shadow: 0 0 10px #003079;
   z-index: 999;
 }
 
@@ -280,4 +279,3 @@
   font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
   height: 100%; /* Set height to 100% */
 }
-
