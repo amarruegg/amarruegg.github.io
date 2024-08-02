@@ -144,13 +144,13 @@ placeholderHTML = `
     <table align="center">
       <tr>
         <td align="center" valign="bottom">
-          <img class="editor-image" border="0" src="https://jungleworks.com/wp-content/uploads/2016/04/business_model.png" alt="image" width="600" style="max-width: 600px; width: 100%; border: 0;">
+          <img class="editor-image" border="0" src="https://kinsta.com/wp-content/uploads/2017/09/email-marketing-software.png" alt="image" width="600" style="max-width: 600px; width: 100%; border: 0;">
         </td>
       </tr>
     </table>
     <button class="url-toggle">🔗</button>
     <div class="url-picker">
-      <input class="url-input" type="text" value="https://jungleworks.com/wp-content/uploads/2016/04/business_model.png">
+      <input class="url-input" type="text" value="Insert image url">
       <button class="url-btn">Update</button>
     </div>
   </div>`;
@@ -302,13 +302,13 @@ placeholderHTML = `
     <table align="center" border="0" cellpadding="0" cellspacing="0" class="wrapto600px" width="600">
       <tr>
         <td style="vertical-align: top;">
-          <table class="" width="100%" align="center" border="0" cellpadding="0" cellspacing="0" bgcolor="#FFF2BD" style="background-color: #FFF2BD;">
+          <table class="" width="100%" align="center" border="0" cellpadding="0" cellspacing="0" bgcolor="#F0F0F0" style="background-color: #F0F0F0;">
               <tr>
                   <td height="30" style="font-size: 30px; line-height: 30px; -mso-line-height: 30px;"> </td>
               </tr>
               <tr>
                   <td align="center" width="100%" style="padding: 0 4%;">
-                      <img src="https://s3.amazonaws.com/growth.lyft.com/img/litmus-design-library/modules/module_7a.png" width="95" style="display: block; max-width: 95px;" alt="Cellphone in Hand" />
+                      <img src="https://static.vecteezy.com/system/resources/thumbnails/021/815/680/small/transparent-triangle-icon-background-png.png" width="95" style="display: block; max-width: 95px;" alt="Cellphone in Hand" />
                   </td>
               </tr>
               <tr>
@@ -332,7 +332,7 @@ placeholderHTML = `
               </tr>
               <tr>
                   <td align="left" valign="top" style="font-family: 'LyftProUI-Bold', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 16px; font-weight: 600; color: #8D3A7F; line-height: 16px; text-align: center; vertical-align: top;">
-                      <a href="https://www.lyft.com" target="_blank" style="color: #8D3A7F; text-decoration: underline;">{{module_cta}}</a>
+                      <a href="https://www.alexruegg.xyz" target="_blank" style="color: #8D3A7F; text-decoration: underline;">{{module_cta}}</a>
                   </td>
               </tr>
               <tr>
@@ -375,7 +375,7 @@ placeholderHTML = `
 <div class="glow-on-hover" style="display: flex; justify-content: center; align-items: center;">
     <table class="wrapto600px" width="600" align="center" border="0" cellpadding="0" cellspacing="0">
   <tr>
-      <td class="header3" style="-webkit-font-smoothing: antialiased; font-family: 'LyftProUI-Bold', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 700; font-size: 37px; line-height: 40px; color: #0C0B31; text-align: left; vertical-align: top; padding-left: 4%; padding-right: 4%;" align="left" valign="top" >
+      <td class="header3" style="-webkit-font-smoothing: antialiased; font-family: 'LyftProUI-Bold', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 700; font-size: 37px; line-height: 40px; color: #0C0B31; text-align: center; vertical-align: top; padding-left: 4%; padding-right: 4%;" align="left" valign="top" >
           {{module_header_1}}
       </td>
   </tr>
@@ -384,14 +384,14 @@ placeholderHTML = `
   </tr>
   <tr>
       <td align="center" valign="bottom">
-          <img src="{{module_img_1}}" alt="{{module_img_alt_1}}" width="600" style="display: block; max-width: 600px; width: 100%; border: 0;" border="0">
+          <img src="https://static.vecteezy.com/system/resources/thumbnails/021/815/680/small/transparent-triangle-icon-background-png.png" alt="{{module_img_alt_1}}" width="16px" style="display: block; max-width: 16pxpx; border: 0;" border="0">
       </td>
   </tr>
   <tr>
       <td height="24" style="font-size: 24px; line-height: 24px; -mso-line-height: 24px;">&nbsp;</td>
   </tr>
   <tr>
-      <td class="subheader1" style="-webkit-font-smoothing: antialiased; font-family: 'LyftProUI-Bold', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 700; font-size: 24px; line-height: 27px; color: #0C0B31; text-align: left; vertical-align: top; padding-left: 4%; padding-right: 4%;" align="left" valign="top">
+      <td class="subheader1" style="-webkit-font-smoothing: antialiased; font-family: 'LyftProUI-Bold', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 700; font-size: 24px; line-height: 27px; color: #0C0B31; text-align: center; vertical-align: top; padding-left: 4%; padding-right: 4%;" align="left" valign="top">
           {{module_subheader_1}}
       </td>
   </tr>
@@ -399,7 +399,7 @@ placeholderHTML = `
       <td height="12" style="font-size: 12px; line-height: 12px; -mso-line-height: 12px;">&nbsp;</td>
   </tr>
   <tr>
-      <td class="body1" style="-webkit-font-smoothing: antialiased; font-family: 'LyftProUI-Regular', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 400; font-size: 16px; line-height: 19px; color: #0C0B31; text-align: left; vertical-align: top; padding-left: 4%; padding-right: 4%;" align="left" valign="top">
+      <td class="body1" style="-webkit-font-smoothing: antialiased; font-family: 'LyftProUI-Regular', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 400; font-size: 16px; line-height: 19px; color: #0C0B31; text-align: center; vertical-align: top; padding-left: 4%; padding-right: 4%;" align="left" valign="top">
           {{module_body_1}}
       </td>
   </tr>
@@ -408,14 +408,14 @@ placeholderHTML = `
   </tr>
   <tr>
       <td align="center" valign="bottom">
-          <img src="{{module_img_2}}" alt="{{module_img_alt_2}}" width="600" style="display: block; max-width: 600px; width: 100%; border: 0;" border="0">
+          <img src="https://static.vecteezy.com/system/resources/thumbnails/021/815/680/small/transparent-triangle-icon-background-png.png" alt="{{module_img_alt_2}}" width="16px" style="display: block; max-width: 16pxpx; border: 0;" border="0">
       </td>
   </tr>
   <tr>
       <td height="24" style="font-size: 24px; line-height: 24px; -mso-line-height: 24px;">&nbsp;</td>
   </tr>
   <tr>
-      <td class="subheader1" style="-webkit-font-smoothing: antialiased; font-family: 'LyftProUI-Bold', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 700; font-size: 24px; line-height: 27px; color: #0C0B31; text-align: left; vertical-align: top; padding-left: 4%; padding-right: 4%;" align="left" valign="top">
+      <td class="subheader1" style="-webkit-font-smoothing: antialiased; font-family: 'LyftProUI-Bold', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 700; font-size: 24px; line-height: 27px; color: #0C0B31; text-align: center; vertical-align: top; padding-left: 4%; padding-right: 4%;" align="left" valign="top">
           {{module_subheader_2}}
       </td>
   </tr>
@@ -423,7 +423,7 @@ placeholderHTML = `
       <td height="12" style="font-size: 12px; line-height: 12px; -mso-line-height: 12px;">&nbsp;</td>
   </tr>
   <tr>
-      <td class="body1" style="-webkit-font-smoothing: antialiased; font-family: 'LyftProUI-Regular', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 400; font-size: 16px; line-height: 19px; color: #0C0B31; text-align: left; vertical-align: top; padding-left: 4%; padding-right: 4%;" align="left" valign="top">
+      <td class="body1" style="-webkit-font-smoothing: antialiased; font-family: 'LyftProUI-Regular', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 400; font-size: 16px; line-height: 19px; color: #0C0B31; text-align: center; vertical-align: top; padding-left: 4%; padding-right: 4%;" align="left" valign="top">
           {{module_body_2}}
       </td>
   </tr>
@@ -432,14 +432,14 @@ placeholderHTML = `
   </tr>
   <tr>
       <td align="center" valign="bottom">
-          <img src="{{module_img_3}}" alt="{{module_img_alt_3}}" width="600" style="display: block; max-width: 600px; width: 100%; border: 0;" border="0">
+          <img src="https://static.vecteezy.com/system/resources/thumbnails/021/815/680/small/transparent-triangle-icon-background-png.png" alt="{{module_img_alt_3}}" width="16px" style="display: block; max-width: 16pxpx; border: 0;" border="0">
       </td>
   </tr>
   <tr>
       <td height="24" style="font-size: 24px; line-height: 24px; -mso-line-height: 24px;">&nbsp;</td>
   </tr>
   <tr>
-      <td class="subheader1" style="-webkit-font-smoothing: antialiased; font-family: 'LyftProUI-Bold', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 700; font-size: 24px; line-height: 27px; color: #0C0B31; text-align: left; vertical-align: top; padding-left: 4%; padding-right: 4%;" align="left" valign="top">
+      <td class="subheader1" style="-webkit-font-smoothing: antialiased; font-family: 'LyftProUI-Bold', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 700; font-size: 24px; line-height: 27px; color: #0C0B31; text-align: center; vertical-align: top; padding-left: 4%; padding-right: 4%;" align="left" valign="top">
           {{module_subheader_3}}
       </td>
   </tr>
@@ -447,7 +447,7 @@ placeholderHTML = `
       <td height="12" style="font-size: 12px; line-height: 12px; -mso-line-height: 12px;">&nbsp;</td>
   </tr>
   <tr>
-      <td class="body1" style="-webkit-font-smoothing: antialiased; font-family: 'LyftProUI-Regular', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 400; font-size: 16px; line-height: 19px; color: #0C0B31; text-align: left; vertical-align: top; padding-left: 4%; padding-right: 4%;" align="left" valign="top">
+      <td class="body1" style="-webkit-font-smoothing: antialiased; font-family: 'LyftProUI-Regular', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 400; font-size: 16px; line-height: 19px; color: #0C0B31; text-align: center; vertical-align: top; padding-left: 4%; padding-right: 4%;" align="left" valign="top">
           {{module_body_3}}
       </td>
   </tr>
@@ -646,4 +646,3 @@ editor.replaceChild(div, placeholder);
       }, { offset: Number.NEGATIVE_INFINITY }).element;
   }
 });
-
