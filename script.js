@@ -92,7 +92,7 @@ function enableCam(event) {
         fetch('https://cors-anywhere.herokuapp.com/http://192.168.67.221/cm?cmnd=POWER1%20TOGGLE', {
             method: 'GET',
         })
-        .then(response => response.json())
+        .then(response => response.text()) // Change to response.text() instead of response.json()
         .then(data => {
             console.log(data); // Log the response from Tasmota
         })
