@@ -89,7 +89,7 @@ function enableCam(event) {
 
     //function to send signal to WiFi relay
     function sendSignalToRelay() {
-        fetch('http://192.168.67.221/cm?cmnd=POWER1%20TOGGLE', {
+        fetch('https://cors-anywhere.herokuapp.com/http://192.168.67.221/cm?cmnd=POWER1%20TOGGLE', {
             method: 'GET',
         })
         .then(response => response.json())
