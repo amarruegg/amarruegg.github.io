@@ -92,7 +92,7 @@ function enableCam(event) {
         fetch('/tasmota/cm?cmnd=POWER1%20TOGGLE', {
             method: 'GET',
         })
-        .then(response => response.json())
+        .then(response => response.text()) // Use response.text() for non-JSON responses
         .then(data => {
             console.log(data); // Log the response from Tasmota
         })
