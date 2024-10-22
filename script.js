@@ -21,6 +21,8 @@ const videoWidth = "480px";
 // Configuration for proxy server
 const PROXY_URL = "http://localhost:3001"; // Update this if your proxy is running on a different host/port
 
+console.log('Script loaded. PROXY_URL:', PROXY_URL);
+
 // Before we can use HandLandmarker class we must wait for it to finish
 // loading. Machine Learning models can be large and take a moment to
 // get everything needed to run.
@@ -93,7 +95,7 @@ function enableCam(event) {
     }
 
 //function to send signal to WiFi relay
-function sendSignalToRelay() {
+window.sendSignalToRelay = function() {
     const url = `${PROXY_URL}/tasmota/cm?cmnd=POWER1%20TOGGLE`;
     console.log('Sending request to:', url);
     
@@ -229,3 +231,5 @@ async function togglePiP() {
         console.error("Error trying to toggle Picture-in-Picture:", error);
     }
 }
+
+console.log('Script fully loaded and executed.');
