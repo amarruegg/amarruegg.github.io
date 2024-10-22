@@ -91,18 +91,28 @@ function enableCam(event) {
 //function to send signal to WiFi relay
 function sendSignalToRelay() {
     const url = '/tasmota/cm?cmnd=POWER1%20TOGGLE';
+    console.log('Sending request to:', window.location.origin + url);
     
     fetch(url, {
         method: 'GET',
     })
     .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        return response.text().then(text => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
+            }
+            return text;
+        });
+    })
+    .then(data => {
+        console.log('Response data:', data);
         console.log('Signal sent to Tasmota device');
     })
     .catch(error => {
         console.error('Error:', error);
+        console.error('Error details:', error.message);
     });
 }
 
