@@ -36,10 +36,8 @@ limitations under the License. -->
   </nav>
 </header>
 <link href="style.css" rel="stylesheet">
-<script src="script.js"></script>
 
 <!-- Wrapper -->
-
 
 <section id="demos" style="text-align: center; background-color: blueviolet;">
 <div style="padding-top: 20px; margin: auto;">
@@ -74,14 +72,29 @@ limitations under the License. -->
 </section>
 
 <!-- partial -->
-  <script type="module" src="./script.js"></script>
   <script src="assets/js/jquery.min.js"></script>
-	<script src="assets/js/jquery.scrollex.min.js"></script>
-	<script src="assets/js/jquery.scrolly.min.js"></script>
-	<script src="assets/js/browser.min.js"></script>
-	<script src="assets/js/breakpoints.min.js"></script>
-	<script src="assets/js/util.js"></script>
-	<script src="assets/js/main.js"></script>
+  <script src="assets/js/jquery.scrollex.min.js"></script>
+  <script src="assets/js/jquery.scrolly.min.js"></script>
+  <script src="assets/js/browser.min.js"></script>
+  <script src="assets/js/breakpoints.min.js"></script>
+  <script src="assets/js/util.js"></script>
+  <script src="assets/js/main.js"></script>
+
+  <!-- Test script -->
+  <script>
+    console.log('Test script executed');
+    window.addEventListener('load', function() {
+      console.log('Window loaded');
+      if (typeof sendSignalToRelay === 'function') {
+        console.log('sendSignalToRelay function is available');
+      } else {
+        console.log('sendSignalToRelay function is not available');
+      }
+    });
+  </script>
+
+  <!-- Main script -->
+  <script type="module" src="./script.js"></script>
 
 </div>
 
