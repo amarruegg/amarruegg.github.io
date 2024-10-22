@@ -9,6 +9,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 import { GestureRecognizer, FilesetResolver, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
+
 const demosSection = document.getElementById("demos");
 let gestureRecognizer;
 let runningMode = "IMAGE";
@@ -87,19 +88,23 @@ function enableCam(event) {
       });
     }
 
-    //function to send signal to WiFi relay
-    function sendSignalToRelay() {
-        fetch('/tasmota/cm?cmnd=POWER1%20TOGGLE', {
-            method: 'GET',
-        })
-        .then(response => response.text()) // Use response.text() for non-JSON responses
-        .then(data => {
-            console.log(data); // Log the response from Tasmota
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    }
+//function to send signal to WiFi relay
+function sendSignalToRelay() {
+    const url = '/tasmota/cm?cmnd=POWER1%20TOGGLE';
+    
+    fetch(url, {
+        method: 'GET',
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        console.log('Signal sent to Tasmota device');
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
 
 let lastVideoTime = -1;
 let results = undefined;
