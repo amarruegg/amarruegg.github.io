@@ -1,7 +1,11 @@
 const express = require('express');
+const cors = require('cors');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
+
+// Enable CORS for all routes
+app.use(cors());
 
 // Define a route for the root URL
 app.get('/', (req, res) => {
@@ -14,10 +18,30 @@ app.use('/tasmota', createProxyMiddleware({
     changeOrigin: true,
     pathRewrite: {
         '^/tasmota': ''
+    },
+    logLevel: 'debug',
+    onError: (err, req, res) => {
+        console.error('Proxy Error:', err);
+        res.status(500).send('Proxy Error');
+    },
+    onProxyReq: (proxyReq, req, res) => {
+        console.log('Proxy Request:', req.method, req.path);
+        console.log('Request Headers:', req.headers);
+    },
+    onProxyRes: (proxyRes, req, res) => {
+        console.log('Proxy Response:', proxyRes.statusCode);
+        console.log('Response Headers:', proxyRes.headers);
     }
 }));
 
 // Change the port number here if needed
-app.listen(3001, () => {
-    console.log('Proxy server is running on port 3001');
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+    console.log(`Proxy server is running on port ${PORT}`);
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Server Error:', err);
+    res.status(500).send('Internal Server Error');
 });
