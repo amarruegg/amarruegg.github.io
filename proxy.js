@@ -19,29 +19,25 @@ app.use('/tasmota', createProxyMiddleware({
     pathRewrite: {
         '^/tasmota': ''
     },
-    logLevel: 'debug',
     onError: (err, req, res) => {
         console.error('Proxy Error:', err);
-        res.status(500).send('Proxy Error');
+        res.status(500).send('Proxy Error: ' + err.message);
     },
     onProxyReq: (proxyReq, req, res) => {
         console.log('Proxy Request:', req.method, req.path);
-        console.log('Request Headers:', req.headers);
     },
     onProxyRes: (proxyRes, req, res) => {
         console.log('Proxy Response:', proxyRes.statusCode);
-        console.log('Response Headers:', proxyRes.headers);
     }
 }));
 
-// Change the port number here if needed
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Proxy server is running on port ${PORT}`);
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('Server Error:', err);
-    res.status(500).send('Internal Server Error');
+    res.status(500).send('Internal Server Error: ' + err.message);
 });
