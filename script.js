@@ -17,6 +17,10 @@ let enableWebcamButton;
 let webcamRunning = false;
 const videoHeight = "360px";
 const videoWidth = "480px";
+
+// Configuration for proxy server
+const PROXY_URL = "http://localhost:3001"; // Update this if your proxy is running on a different host/port
+
 // Before we can use HandLandmarker class we must wait for it to finish
 // loading. Machine Learning models can be large and take a moment to
 // get everything needed to run.
@@ -90,8 +94,8 @@ function enableCam(event) {
 
 //function to send signal to WiFi relay
 function sendSignalToRelay() {
-    const url = '/tasmota/cm?cmnd=POWER1%20TOGGLE';
-    console.log('Sending request to:', window.location.origin + url);
+    const url = `${PROXY_URL}/tasmota/cm?cmnd=POWER1%20TOGGLE`;
+    console.log('Sending request to:', url);
     
     fetch(url, {
         method: 'GET',
