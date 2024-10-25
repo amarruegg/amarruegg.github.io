@@ -16,12 +16,18 @@ console.log('Script loaded. PROXY_URL:', PROXY_URL);
 // Initialize the GestureRecognizer with specific focus on face/beard area
 const createGestureRecognizer = async () => {
     const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
+    // Create both face and gesture recognizers
     gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
         baseOptions: {
             modelAssetPath: "face_gesture_recognizer.task",
             delegate: "GPU"
         },
-        runningMode: runningMode
+        runningMode: runningMode,
+        // Enable face landmark detection
+        numFaces: 1,
+        minFaceDetectionConfidence: 0.5,
+        minFacePresenceConfidence: 0.5,
+        minTrackingConfidence: 0.5
     });
     demosSection.classList.remove("invisible");
 };
@@ -132,18 +138,26 @@ function isHandNearBeard(landmarks) {
 }
 
 // Add this function after the isHandNearBeard function
-function drawDetectionAreas(ctx, canvasWidth, canvasHeight) {
-    // Draw beard area
+// Update the drawDetectionAreas function to use face landmarks
+function drawDetectionAreas(ctx, canvasWidth, canvasHeight, faceLandmarks) {
+    if (!faceLandmarks) return;
+    
+    const mouthBottom = faceLandmarks[152];
+    const chinBottom = faceLandmarks[175];
+    const leftJaw = faceLandmarks[207];
+    const rightJaw = faceLandmarks[427];
+    
+    // Calculate dynamic beard area
     const beardArea = {
-        top: 0.55,
-        bottom: 0.85,
-        left: 0.3,
-        right: 0.7
+        top: mouthBottom.y - 0.02,
+        bottom: chinBottom.y + 0.05,
+        left: leftJaw.x - 0.02,
+        right: rightJaw.x + 0.02
     };
 
     // Draw beard area rectangle
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)'; // Semi-transparent green
+    ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
     ctx.lineWidth = 2;
     ctx.rect(
         beardArea.left * canvasWidth,
@@ -152,17 +166,9 @@ function drawDetectionAreas(ctx, canvasWidth, canvasHeight) {
         (beardArea.bottom - beardArea.top) * canvasHeight
     );
     ctx.stroke();
-
-    // Add labels for beard area boundaries
-    ctx.fillStyle = 'green';
-    ctx.font = '12px Arial';
-    ctx.fillText(`Top: ${beardArea.top}`, 10, beardArea.top * canvasHeight);
-    ctx.fillText(`Bottom: ${beardArea.bottom}`, 10, beardArea.bottom * canvasHeight);
-    ctx.fillText(`Left: ${beardArea.left}`, beardArea.left * canvasWidth, 20);
-    ctx.fillText(`Right: ${beardArea.right}`, beardArea.right * canvasWidth - 50, 20);
-
 }
 
+// Update the predictWebcam function to include face detection
 async function predictWebcam() {
     const webcamElement = document.getElementById("webcam");
     
@@ -177,10 +183,13 @@ async function predictWebcam() {
         results = gestureRecognizer.recognizeForVideo(video, nowInMs);
     }
 
+    const faceLandmarks = results.faceLandmarks ? results.faceLandmarks[0] : null;
+    
     // Check for beard touching gesture
     const isBeardTouching = results.landmarks && 
                            results.landmarks.length > 0 && 
-                           isHandNearBeard(results.landmarks[0]);
+                           faceLandmarks &&
+                           isHandNearBeard(results.landmarks[0], faceLandmarks);
 
     if (isBeardTouching) {
         if (!beardTouchingStartTime) {
@@ -220,6 +229,10 @@ async function predictWebcam() {
                 lineWidth: 2
             });
         }
+    }
+    
+    if (faceLandmarks) {
+        drawDetectionAreas(canvasCtx, canvasElement.width, canvasElement.height, faceLandmarks);
     }
     drawDetectionAreas(canvasCtx, canvasElement.width, canvasElement.height);
     canvasCtx.restore();
