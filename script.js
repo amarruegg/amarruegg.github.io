@@ -115,7 +115,7 @@ function isHandNearBeard(landmarks) {
     // Define beard area boundaries (relative coordinates)
     const beardArea = {
         top: 0.6,    // Approximately mouth level
-        bottom: 0.85, // Lower chin/neck
+        bottom: 0.8, // Lower chin/neck
         left: 0.3,   // Left side of face
         right: 0.7   // Right side of face
     };
