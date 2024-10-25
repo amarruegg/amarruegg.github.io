@@ -131,6 +131,38 @@ function isHandNearBeard(landmarks) {
     });
 }
 
+// Add this function after the isHandNearBeard function
+function drawDetectionAreas(ctx, canvasWidth, canvasHeight) {
+    // Draw beard area
+    const beardArea = {
+        top: 0.55,
+        bottom: 0.85,
+        left: 0.3,
+        right: 0.7
+    };
+
+    // Draw beard area rectangle
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)'; // Semi-transparent green
+    ctx.lineWidth = 2;
+    ctx.rect(
+        beardArea.left * canvasWidth,
+        beardArea.top * canvasHeight,
+        (beardArea.right - beardArea.left) * canvasWidth,
+        (beardArea.bottom - beardArea.top) * canvasHeight
+    );
+    ctx.stroke();
+
+    // Add labels for beard area boundaries
+    ctx.fillStyle = 'green';
+    ctx.font = '12px Arial';
+    ctx.fillText(`Top: ${beardArea.top}`, 10, beardArea.top * canvasHeight);
+    ctx.fillText(`Bottom: ${beardArea.bottom}`, 10, beardArea.bottom * canvasHeight);
+    ctx.fillText(`Left: ${beardArea.left}`, beardArea.left * canvasWidth, 20);
+    ctx.fillText(`Right: ${beardArea.right}`, beardArea.right * canvasWidth - 50, 20);
+
+}
+
 async function predictWebcam() {
     const webcamElement = document.getElementById("webcam");
     
@@ -189,6 +221,7 @@ async function predictWebcam() {
             });
         }
     }
+    drawDetectionAreas(canvasCtx, canvasElement.width, canvasElement.height);
     canvasCtx.restore();
 
     // Update gesture output display
