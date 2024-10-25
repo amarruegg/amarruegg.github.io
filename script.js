@@ -112,40 +112,23 @@ const audio = new Audio('alarm.mp3');
 function isHandNearBeard(landmarks) {
     if (!landmarks || landmarks.length === 0) return false;
     
-    // Expanded beard area boundaries with better chin/neck coverage
+    // Define beard area boundaries (relative coordinates)
     const beardArea = {
-        top: 0.55,    // Slightly higher to catch upper beard
-        bottom: 0.85, // Lower to better detect neck/chin touches
-        left: 0.3,    // Left side of face
-        right: 0.7,   // Right side of face
+        top: 0.6,    // Approximately mouth level
+        bottom: 0.85, // Lower chin/neck
+        left: 0.3,   // Left side of face
+        right: 0.7   // Right side of face
     };
 
-    // Check index finger tip and middle finger tip (most common touching points)
-    const primaryFingerIndices = [8, 12]; 
-    const primaryTouch = primaryFingerIndices.some(index => {
+    // Check if any finger tips are in the beard area
+    const fingerTipIndices = [4, 8, 12, 16, 20]; // Thumb and finger tips
+    return fingerTipIndices.some(index => {
         const point = landmarks[index];
         return point.y >= beardArea.top &&
                point.y <= beardArea.bottom &&
                point.x >= beardArea.left &&
                point.x <= beardArea.right;
     });
-
-    // Additional check for chin/neck area with wider horizontal range
-    const chinArea = {
-        top: 0.75,    // Lower chin area
-        bottom: 0.85, // Neck area
-        left: 0.25,   // Wider range for chin
-        right: 0.75   // Wider range for chin
-    };
-
-    const chinTouch = landmarks.some(point => {
-        return point.y >= chinArea.top &&
-               point.y <= chinArea.bottom &&
-               point.x >= chinArea.left &&
-               point.x <= chinArea.right;
-    });
-
-    return primaryTouch || chinTouch;
 }
 
 async function predictWebcam() {
