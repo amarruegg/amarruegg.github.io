@@ -1,13 +1,3 @@
-// Copyright 2023 The MediaPipe Authors.
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//      http://www.apache.org/licenses/LICENSE-2.0
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 import { GestureRecognizer, FilesetResolver, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
 
 const demosSection = document.getElementById("demos");
@@ -19,13 +9,11 @@ const videoHeight = "360px";
 const videoWidth = "480px";
 
 // Configuration for proxy server
-const PROXY_URL = "http://localhost:3001"; // Update this if your proxy is running on a different host/port
+const PROXY_URL = "http://localhost:3001";
 
 console.log('Script loaded. PROXY_URL:', PROXY_URL);
 
-// Before we can use HandLandmarker class we must wait for it to finish
-// loading. Machine Learning models can be large and take a moment to
-// get everything needed to run.
+// Initialize the GestureRecognizer with specific focus on face/beard area
 const createGestureRecognizer = async () => {
     const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
     gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
@@ -43,20 +31,19 @@ const video = document.getElementById("webcam");
 const canvasElement = document.getElementById("output_canvas");
 const canvasCtx = canvasElement.getContext("2d");
 const gestureOutput = document.getElementById("gesture_output");
-// Check if webcam access is supported.
+
+// Check if webcam access is supported
 function hasGetUserMedia() {
     return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }
-// If webcam supported, add event listener to button for when user
-// wants to activate it.
+
 if (hasGetUserMedia()) {
     enableWebcamButton = document.getElementById("webcamButton");
     enableWebcamButton.addEventListener("click", enableCam);
-}
-else {
+} else {
     console.warn("getUserMedia() is not supported by your browser");
 }
-// Enable the live webcam view and start detection.
+
 function enableCam(event) {
     if (!gestureRecognizer) {
         alert("Please wait for gestureRecognizer to load");
@@ -64,37 +51,30 @@ function enableCam(event) {
     }
     if (webcamRunning === true) {
         webcamRunning = false;
-        enableWebcamButton.innerText = "ENABLE PREDICTIONS";
-    }
-    else {
+        enableWebcamButton.innerText = "ENABLE BEARD TOUCH DETECTION";
+    } else {
         webcamRunning = true;
-        enableWebcamButton.innerText = "DISABLE PREDICTIONS";
+        enableWebcamButton.innerText = "DISABLE BEARD TOUCH DETECTION";
     }
-    // getUsermedia parameters.
+
     const constraints = {
         video: true
     };
-    // Activate the webcam stream.
-    navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
-        video.srcObject = stream;
-        video.addEventListener("loadeddata", predictWebcam);
-    });
+
     navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
         video.srcObject = stream;
         video.addEventListener("loadeddata", function() {
-          // Append the enableWebcamButton to the #demos section
-          enableWebcamButton.style.position = 'relative';
-          enableWebcamButton.style.top = 'initial';
-          enableWebcamButton.style.left = 'initial';
-          enableWebcamButton.style.transform = 'initial';
-          enableWebcamButton.style.zIndex = 'initial';
-          document.getElementById("demos").appendChild(enableWebcamButton);
-          predictWebcam();
+            enableWebcamButton.style.position = 'relative';
+            enableWebcamButton.style.top = 'initial';
+            enableWebcamButton.style.left = 'initial';
+            enableWebcamButton.style.transform = 'initial';
+            enableWebcamButton.style.zIndex = 'initial';
+            document.getElementById("demos").appendChild(enableWebcamButton);
+            predictWebcam();
         });
-      });
-    }
+    });
+}
 
-//function to send signal to WiFi relay
 window.sendSignalToRelay = function() {
     const url = `${PROXY_URL}/tasmota/cm?cmnd=POWER1%20TOGGLE`;
     console.log('Sending request to:', url);
@@ -124,44 +104,79 @@ window.sendSignalToRelay = function() {
 
 let lastVideoTime = -1;
 let results = undefined;
-let touchingStartTime = null; // Add this line
-let soundPlaying = false; // Add this line
+let beardTouchingStartTime = null;
+let soundPlaying = false;
 const audio = new Audio('alarm.mp3');
+
+// Function to check if hand landmarks are in beard area
+function isHandNearBeard(landmarks) {
+    if (!landmarks || landmarks.length === 0) return false;
+    
+    // Define beard area boundaries (relative coordinates)
+    const beardArea = {
+        top: 0.6,    // Approximately mouth level
+        bottom: 0.8, // Lower chin/neck
+        left: 0.3,   // Left side of face
+        right: 0.7   // Right side of face
+    };
+
+    // Check if any finger tips are in the beard area
+    const fingerTipIndices = [4, 8, 12, 16, 20]; // Thumb and finger tips
+    return fingerTipIndices.some(index => {
+        const point = landmarks[index];
+        return point.y >= beardArea.top &&
+               point.y <= beardArea.bottom &&
+               point.x >= beardArea.left &&
+               point.x <= beardArea.right;
+    });
+}
+
 async function predictWebcam() {
     const webcamElement = document.getElementById("webcam");
-    // Now let's start detecting the stream.
+    
     if (runningMode === "IMAGE") {
         runningMode = "VIDEO";
         await gestureRecognizer.setOptions({ runningMode: "VIDEO" });
     }
+    
     let nowInMs = Date.now();
     if (video.currentTime !== lastVideoTime) {
         lastVideoTime = video.currentTime;
         results = gestureRecognizer.recognizeForVideo(video, nowInMs);
     }
-    if (results.gestures.length > 0 && results.gestures[0][0].categoryName === "touching") {
-        if (!touchingStartTime) {
-            touchingStartTime = Date.now();
-        } else if (Date.now() - touchingStartTime >= 1000 && !soundPlaying) {
+
+    // Check for beard touching gesture
+    const isBeardTouching = results.landmarks && 
+                           results.landmarks.length > 0 && 
+                           isHandNearBeard(results.landmarks[0]);
+
+    if (isBeardTouching) {
+        if (!beardTouchingStartTime) {
+            beardTouchingStartTime = Date.now();
+        } else if (Date.now() - beardTouchingStartTime >= 1000 && !soundPlaying) {
             audio.play();
             sendSignalToRelay();
             soundPlaying = true;
         }
     } else {
-        touchingStartTime = null;
+        beardTouchingStartTime = null;
         if (soundPlaying) {
-            audio.pause(); // Stop the sound if the gesture is not "touching"
-            audio.currentTime = 0; // Reset audio playback to the start
+            audio.pause();
+            audio.currentTime = 0;
             soundPlaying = false;
         }
     }
+
+    // Draw landmarks and update canvas
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     const drawingUtils = new DrawingUtils(canvasCtx);
+    
     canvasElement.style.height = videoHeight;
     webcamElement.style.height = videoHeight;
     canvasElement.style.width = videoWidth;
     webcamElement.style.width = videoWidth;
+
     if (results.landmarks) {
         for (const landmarks of results.landmarks) {
             drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, {
@@ -175,48 +190,44 @@ async function predictWebcam() {
         }
     }
     canvasCtx.restore();
-    if (results.gestures.length > 0) {
+
+    // Update gesture output display
+    if (results.landmarks && results.landmarks.length > 0) {
         gestureOutput.style.display = "block";
         gestureOutput.style.width = videoWidth;
-        const categoryName = results.gestures[0][0].categoryName;
-        const categoryScore = parseFloat(results.gestures[0][0].score * 100).toFixed(2);
         const handedness = results.handednesses[0][0].displayName;
-        gestureOutput.innerText = `GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore} %\n Handedness: ${handedness}`;
-    }
-    else {
+        gestureOutput.innerText = `Status: ${isBeardTouching ? 'Beard Touch Detected!' : 'No Beard Touch'}\n` +
+                                 `Hand: ${handedness}`;
+    } else {
         gestureOutput.style.display = "none";
     }
-    // Call this function again to keep predicting when the browser is ready.
+
     if (webcamRunning === true) {
         window.requestAnimationFrame(predictWebcam);
     }
 }
 
-// Add this code to create a stop button and append it to your page
+// Stop button functionality
 const stopButton = document.createElement("button");
-stopButton.innerText = "Stop";
+stopButton.innerText = "Stop Alert";
 stopButton.addEventListener("click", stopSound);
-document.body.appendChild(stopButton); // Append the button to the body or another element of your choice
+document.body.appendChild(stopButton);
 
-// Add this function to stop the sound
 function stopSound() {
     audio.pause();
-    audio.currentTime = 0; // Reset audio playback to the start
+    audio.currentTime = 0;
     soundPlaying = false;
 }
 
-// Check if Picture-in-Picture is supported
+// Picture-in-Picture functionality
 if ('pictureInPictureEnabled' in document) {
     const pipButton = document.createElement("button");
     pipButton.innerText = "Minimize Video";
     pipButton.addEventListener("click", togglePiP);
-    const demosSection = document.getElementById("demos"); // Get the demos section
-    demosSection.appendChild(pipButton); // Append the button to the demos section
-} else {
-    console.error("Picture-in-Picture is not supported by this browser.");
+    const demosSection = document.getElementById("demos");
+    demosSection.appendChild(pipButton);
 }
 
-// Function to toggle Picture-in-Picture
 async function togglePiP() {
     try {
         if (document.pictureInPictureElement) {
@@ -232,4 +243,4 @@ async function togglePiP() {
     }
 }
 
-console.log('Script fully loaded and executed.');
+console.log('Beard touch detection script fully loaded and executed.');
