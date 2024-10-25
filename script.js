@@ -137,22 +137,22 @@ function isHandNearBeard(landmarks) {
     });
 }
 
-// Add this function after the isHandNearBeard function
 // Update the drawDetectionAreas function to use face landmarks
 function drawDetectionAreas(ctx, canvasWidth, canvasHeight, faceLandmarks) {
     if (!faceLandmarks) return;
     
+    // Get key facial landmarks for beard area
     const mouthBottom = faceLandmarks[152];
     const chinBottom = faceLandmarks[175];
     const leftJaw = faceLandmarks[207];
     const rightJaw = faceLandmarks[427];
     
-    // Calculate dynamic beard area
+    // Calculate dynamic beard area with padding
     const beardArea = {
-        top: mouthBottom.y - 0.02,
-        bottom: chinBottom.y + 0.05,
-        left: leftJaw.x - 0.02,
-        right: rightJaw.x + 0.02
+        top: mouthBottom.y * canvasHeight - (0.02 * canvasHeight),
+        bottom: chinBottom.y * canvasHeight + (0.05 * canvasHeight),
+        left: leftJaw.x * canvasWidth - (0.02 * canvasWidth),
+        right: rightJaw.x * canvasWidth + (0.02 * canvasWidth)
     };
 
     // Draw beard area rectangle
@@ -160,10 +160,10 @@ function drawDetectionAreas(ctx, canvasWidth, canvasHeight, faceLandmarks) {
     ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
     ctx.lineWidth = 2;
     ctx.rect(
-        beardArea.left * canvasWidth,
-        beardArea.top * canvasHeight,
-        (beardArea.right - beardArea.left) * canvasWidth,
-        (beardArea.bottom - beardArea.top) * canvasHeight
+        beardArea.left,
+        beardArea.top,
+        beardArea.right - beardArea.left,
+        beardArea.bottom - beardArea.top
     );
     ctx.stroke();
 }
@@ -218,6 +218,10 @@ async function predictWebcam() {
     canvasElement.style.width = videoWidth;
     webcamElement.style.width = videoWidth;
 
+    // Set actual canvas dimensions to match display dimensions
+    canvasElement.width = parseInt(videoWidth);
+    canvasElement.height = parseInt(videoHeight);
+
     if (results.landmarks) {
         for (const landmarks of results.landmarks) {
             drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, {
@@ -231,10 +235,11 @@ async function predictWebcam() {
         }
     }
     
+    // Draw face detection area if face landmarks are available
     if (faceLandmarks) {
         drawDetectionAreas(canvasCtx, canvasElement.width, canvasElement.height, faceLandmarks);
     }
-    drawDetectionAreas(canvasCtx, canvasElement.width, canvasElement.height);
+
     canvasCtx.restore();
 
     // Update gesture output display
