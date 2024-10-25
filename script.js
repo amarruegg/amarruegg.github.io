@@ -137,33 +137,33 @@ function isHandNearBeard(landmarks) {
     });
 }
 
-// Update the drawDetectionAreas function to use face landmarks
-function drawDetectionAreas(ctx, canvasWidth, canvasHeight, faceLandmarks) {
-    if (!faceLandmarks) return;
-    
-    // Get key facial landmarks for beard area
-    const mouthBottom = faceLandmarks[152];
-    const chinBottom = faceLandmarks[175];
-    const leftJaw = faceLandmarks[207];
-    const rightJaw = faceLandmarks[427];
-    
-    // Calculate dynamic beard area with padding
+// Draw the face detection box
+function drawFaceBox(ctx, width, height) {
+    // Define beard area boundaries (relative coordinates)
     const beardArea = {
-        top: mouthBottom.y * canvasHeight - (0.02 * canvasHeight),
-        bottom: chinBottom.y * canvasHeight + (0.05 * canvasHeight),
-        left: leftJaw.x * canvasWidth - (0.02 * canvasWidth),
-        right: rightJaw.x * canvasWidth + (0.02 * canvasWidth)
+        top: 0.6,    // Approximately mouth level
+        bottom: 0.8, // Lower chin/neck
+        left: 0.3,   // Left side of face
+        right: 0.7   // Right side of face
     };
 
-    // Draw beard area rectangle
+    // Convert relative coordinates to actual pixels
+    const box = {
+        top: beardArea.top * height,
+        bottom: beardArea.bottom * height,
+        left: beardArea.left * width,
+        right: beardArea.right * width
+    };
+
+    // Draw the box
     ctx.beginPath();
     ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
     ctx.lineWidth = 2;
     ctx.rect(
-        beardArea.left,
-        beardArea.top,
-        beardArea.right - beardArea.left,
-        beardArea.bottom - beardArea.top
+        box.left,
+        box.top,
+        box.right - box.left,
+        box.bottom - box.top
     );
     ctx.stroke();
 }
@@ -183,13 +183,10 @@ async function predictWebcam() {
         results = gestureRecognizer.recognizeForVideo(video, nowInMs);
     }
 
-    const faceLandmarks = results.faceLandmarks ? results.faceLandmarks[0] : null;
-    
     // Check for beard touching gesture
     const isBeardTouching = results.landmarks && 
                            results.landmarks.length > 0 && 
-                           faceLandmarks &&
-                           isHandNearBeard(results.landmarks[0], faceLandmarks);
+                           isHandNearBeard(results.landmarks[0]);
 
     if (isBeardTouching) {
         if (!beardTouchingStartTime) {
@@ -213,15 +210,20 @@ async function predictWebcam() {
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     const drawingUtils = new DrawingUtils(canvasCtx);
     
+    // Set canvas dimensions
     canvasElement.style.height = videoHeight;
     webcamElement.style.height = videoHeight;
     canvasElement.style.width = videoWidth;
     webcamElement.style.width = videoWidth;
-
-    // Set actual canvas dimensions to match display dimensions
+    
+    // Set actual canvas dimensions
     canvasElement.width = parseInt(videoWidth);
     canvasElement.height = parseInt(videoHeight);
 
+    // Draw the video frame
+    canvasCtx.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+
+    // Draw hand landmarks if present
     if (results.landmarks) {
         for (const landmarks of results.landmarks) {
             drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, {
@@ -234,11 +236,9 @@ async function predictWebcam() {
             });
         }
     }
-    
-    // Draw face detection area if face landmarks are available
-    if (faceLandmarks) {
-        drawDetectionAreas(canvasCtx, canvasElement.width, canvasElement.height, faceLandmarks);
-    }
+
+    // Always draw the face detection box
+    drawFaceBox(canvasCtx, canvasElement.width, canvasElement.height);
 
     canvasCtx.restore();
 
