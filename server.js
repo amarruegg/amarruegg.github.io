@@ -1,29 +1,26 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const OpenAI = require('openai');
-
-const openai = new OpenAI('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');
-
 const app = express();
+const http = require('http').Server(app);
+const io = require('socket.io')(http);
 
-app.use(bodyParser.json());
+// Serve static files from public directory
+app.use(express.static('public'));
 
-app.post('/api/completions', async (req, res) => {
-    const prompt = req.body.prompt;
-    const maxTokens = req.body.max_tokens;
-
-    try {
-        const response = await openai.complete({
-            engine: 'davinci-codex',
-            prompt: prompt,
-            max_tokens: maxTokens
-        });
-
-        res.json(response.data.choices[0].text);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Error completing prompt' });
-    }
+// Serve index.html
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/public/index.html');
 });
 
-app.listen(3000, () => console.log('Server listening on port 3000'));
+// Socket.io connection handling
+io.on('connection', (socket) => {
+    console.log('A user connected');
+    socket.on('disconnect', () => {
+        console.log('User disconnected');
+    });
+});
+
+// Start server
+const PORT = 3002;
+http.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
