@@ -1,3 +1,4 @@
+// Same content as public/script.js
 const videoElement = document.getElementById('input_video');
 const canvasElement = document.getElementById('output_canvas');
 const canvasCtx = canvasElement.getContext('2d');
@@ -46,35 +47,58 @@ function updateDimensions() {
     videoElement.height = container.offsetHeight;
 }
 
-// Initialize MediaPipe Hands
-const hands = new Hands({
-    locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+let hands, faceMesh;
+
+// Initialize MediaPipe
+async function initializeMediaPipe() {
+    try {
+        // Initialize MediaPipe Hands
+        hands = new Hands({
+            locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${file}`;
+            }
+        });
+
+        // Initialize MediaPipe Face Mesh
+        faceMesh = new FaceMesh({
+            locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1646424915/${file}`;
+            }
+        });
+
+        // Configure hands
+        hands.setOptions({
+            maxNumHands: 2,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        // Configure face mesh
+        faceMesh.setOptions({
+            maxNumFaces: 1,
+            refineLandmarks: true,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        // Set up result handlers
+        hands.onResults(onHandsResults);
+        faceMesh.onResults(onFaceMeshResults);
+
+        await Promise.all([
+            hands.initialize(),
+            faceMesh.initialize()
+        ]);
+
+        console.log('MediaPipe models initialized successfully');
+        return true;
+    } catch (error) {
+        console.error('Error initializing MediaPipe:', error);
+        alert('Error initializing models. Please refresh the page and try again.');
+        return false;
     }
-});
-
-// Initialize MediaPipe Face Mesh
-const faceMesh = new FaceMesh({
-    locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
-    }
-});
-
-// Configure hands
-hands.setOptions({
-    maxNumHands: 2,
-    modelComplexity: 1,
-    minDetectionConfidence: 0.5,
-    minTrackingConfidence: 0.5
-});
-
-// Configure face mesh
-faceMesh.setOptions({
-    maxNumFaces: 1,
-    refineLandmarks: true,
-    minDetectionConfidence: 0.5,
-    minTrackingConfidence: 0.5
-});
+}
 
 let faceLandmarks = null;
 let handResults = null;
@@ -86,7 +110,7 @@ let timeRemaining = 3;
 let webcamRunning = false;
 
 // Handle hands results
-hands.onResults((results) => {
+function onHandsResults(results) {
     handResults = results;
     if (results.multiHandLandmarks && boundaryPoints.length > 0) {
         let isCrossing = false;
@@ -110,10 +134,10 @@ hands.onResults((results) => {
         hideTextAlert();
         resetBoundaryTimer();
     }
-});
+}
 
 // Handle face mesh results
-faceMesh.onResults((results) => {
+function onFaceMeshResults(results) {
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
@@ -194,7 +218,7 @@ faceMesh.onResults((results) => {
     }
 
     canvasCtx.restore();
-});
+}
 
 // Calculate confidence of finger crossing face boundary
 function calculateFingerFaceConfidence(handLandmarks, boundaryPoints) {
@@ -358,28 +382,40 @@ function hasGetUserMedia() {
 }
 
 // Enable webcam
-function enableCam() {
+async function enableCam() {
     if (!hands || !faceMesh) {
-        alert("Please wait for models to load");
-        return;
+        const initialized = await initializeMediaPipe();
+        if (!initialized) return;
     }
 
     if (webcamRunning) {
         webcamRunning = false;
         enableWebcamButton.innerText = "ENABLE CAMERA";
+        // Stop the video stream
+        if (videoElement.srcObject) {
+            const tracks = videoElement.srcObject.getTracks();
+            tracks.forEach(track => track.stop());
+            videoElement.srcObject = null;
+        }
     } else {
         webcamRunning = true;
         enableWebcamButton.innerText = "DISABLE CAMERA";
+
+        const constraints = {
+            video: true
+        };
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            videoElement.srcObject = stream;
+            videoElement.addEventListener("loadeddata", predictWebcam);
+        } catch (err) {
+            console.error("Error accessing webcam:", err);
+            alert("Error accessing webcam. Please ensure camera permissions are granted.");
+            webcamRunning = false;
+            enableWebcamButton.innerText = "ENABLE CAMERA";
+        }
     }
-
-    const constraints = {
-        video: true
-    };
-
-    navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
-        videoElement.srcObject = stream;
-        videoElement.addEventListener("loadeddata", predictWebcam);
-    });
 }
 
 // Create enable webcam button
@@ -398,6 +434,7 @@ if (hasGetUserMedia()) {
     enableWebcamButton.addEventListener("click", enableCam);
 } else {
     console.warn("getUserMedia() is not supported by your browser");
+    alert("getUserMedia() is not supported by your browser");
 }
 
 // Predict webcam
@@ -413,11 +450,5 @@ async function predictWebcam() {
 updateDimensions();
 window.addEventListener('resize', updateDimensions);
 
-// Initialize MediaPipe
-Promise.all([
-    hands.initialize(),
-    faceMesh.initialize()
-]).catch(error => {
-    console.error('Error initializing:', error);
-    alert('Error initializing models');
-});
+// Initialize MediaPipe when the page loads
+window.addEventListener('load', initializeMediaPipe);
