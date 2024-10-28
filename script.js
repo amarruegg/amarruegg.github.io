@@ -1,4 +1,5 @@
-// Same content as public/script.js
+import { GestureRecognizer, FilesetResolver, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
+
 const videoElement = document.getElementById('input_video');
 const canvasElement = document.getElementById('output_canvas');
 const canvasCtx = canvasElement.getContext('2d');
@@ -13,6 +14,14 @@ const countdownNumber = document.getElementById('countdown_number');
 
 // Configuration for proxy server
 const PROXY_URL = "http://localhost:3001";
+
+let gestureRecognizer;
+let runningMode = "IMAGE";
+let webcamRunning = false;
+let boundaryTimer = null;
+let isNedryShowing = false;
+let countdownInterval = null;
+let timeRemaining = 3;
 
 // Function to send signal to Tasmota relay
 function sendSignalToRelay() {
@@ -39,249 +48,33 @@ function sendSignalToRelay() {
     });
 }
 
+// Initialize the GestureRecognizer
+const createGestureRecognizer = async () => {
+    const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+    );
+    gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
+        baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",
+            delegate: "GPU"
+        },
+        runningMode: runningMode,
+        numHands: 2,
+        minHandDetectionConfidence: 0.5,
+        minHandPresenceConfidence: 0.5,
+        minTrackingConfidence: 0.5
+    });
+};
+
+// Initialize MediaPipe
+createGestureRecognizer();
+
 // Set initial dimensions
 function updateDimensions() {
     canvasElement.width = container.offsetWidth;
     canvasElement.height = container.offsetHeight;
     videoElement.width = container.offsetWidth;
     videoElement.height = container.offsetHeight;
-}
-
-let hands, faceMesh;
-
-// Initialize MediaPipe
-async function initializeMediaPipe() {
-    try {
-        // Initialize MediaPipe Hands
-        hands = new Hands({
-            locateFile: (file) => {
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${file}`;
-            }
-        });
-
-        // Initialize MediaPipe Face Mesh
-        faceMesh = new FaceMesh({
-            locateFile: (file) => {
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1646424915/${file}`;
-            }
-        });
-
-        // Configure hands
-        hands.setOptions({
-            maxNumHands: 2,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
-
-        // Configure face mesh
-        faceMesh.setOptions({
-            maxNumFaces: 1,
-            refineLandmarks: true,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
-
-        // Set up result handlers
-        hands.onResults(onHandsResults);
-        faceMesh.onResults(onFaceMeshResults);
-
-        await Promise.all([
-            hands.initialize(),
-            faceMesh.initialize()
-        ]);
-
-        console.log('MediaPipe models initialized successfully');
-        return true;
-    } catch (error) {
-        console.error('Error initializing MediaPipe:', error);
-        alert('Error initializing models. Please refresh the page and try again.');
-        return false;
-    }
-}
-
-let faceLandmarks = null;
-let handResults = null;
-let boundaryPoints = [];
-let boundaryTimer = null;
-let isNedryShowing = false;
-let countdownInterval = null;
-let timeRemaining = 3;
-let webcamRunning = false;
-
-// Handle hands results
-function onHandsResults(results) {
-    handResults = results;
-    if (results.multiHandLandmarks && boundaryPoints.length > 0) {
-        let isCrossing = false;
-        for (const landmarks of results.multiHandLandmarks) {
-            const confidence = calculateFingerFaceConfidence(landmarks, boundaryPoints);
-            updateConfidenceMeter(confidence);
-            
-            if (confidence > 0.8) {
-                isCrossing = true;
-                handleBoundaryViolation();
-            }
-        }
-        if (isCrossing) {
-            showTextAlert();
-        } else {
-            hideTextAlert();
-            resetBoundaryTimer();
-        }
-    } else {
-        updateConfidenceMeter(0);
-        hideTextAlert();
-        resetBoundaryTimer();
-    }
-}
-
-// Handle face mesh results
-function onFaceMeshResults(results) {
-    canvasCtx.save();
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
-    if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-        faceLandmarks = results.multiFaceLandmarks[0];
-        
-        // Get lower face boundary points
-        const lowerFaceIndices = [
-            234, // Left ear area
-            93, 132, 58, 172, 136, 150, 149, 176, 148, 152, // Left jaw line
-            377, 400, 378, 379, 365, 397, 288, 361, // Right jaw line
-            447  // Right ear area (symmetric with 234)
-        ];
-        boundaryPoints = lowerFaceIndices.map(index => faceLandmarks[index]);
-        
-        // Draw face mesh
-        for (const landmarks of results.multiFaceLandmarks) {
-            drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION,
-                {color: 'rgba(255, 255, 255, 0.2)', lineWidth: 1});
-            drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE,
-                {color: 'rgba(255, 255, 255, 0.4)'});
-            drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE,
-                {color: 'rgba(255, 255, 255, 0.4)'});
-            drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL,
-                {color: 'rgba(255, 255, 255, 0.4)'});
-            
-            // Draw smooth boundary line
-            if (boundaryPoints.length > 0) {
-                canvasCtx.beginPath();
-                canvasCtx.moveTo(
-                    boundaryPoints[0].x * canvasElement.width,
-                    boundaryPoints[0].y * canvasElement.height
-                );
-                
-                // Use quadratic curves for smoother line
-                for (let i = 1; i < boundaryPoints.length; i++) {
-                    const xc = (boundaryPoints[i].x + boundaryPoints[i-1].x) / 2 * canvasElement.width;
-                    const yc = (boundaryPoints[i].y + boundaryPoints[i-1].y) / 2 * canvasElement.height;
-                    canvasCtx.quadraticCurveTo(
-                        boundaryPoints[i-1].x * canvasElement.width,
-                        boundaryPoints[i-1].y * canvasElement.height,
-                        xc,
-                        yc
-                    );
-                }
-                // Close the path smoothly
-                const lastPoint = boundaryPoints[boundaryPoints.length-1];
-                const firstPoint = boundaryPoints[0];
-                const xc = (firstPoint.x + lastPoint.x) / 2 * canvasElement.width;
-                const yc = (firstPoint.y + lastPoint.y) / 2 * canvasElement.height;
-                canvasCtx.quadraticCurveTo(
-                    lastPoint.x * canvasElement.width,
-                    lastPoint.y * canvasElement.height,
-                    firstPoint.x * canvasElement.width,
-                    firstPoint.y * canvasElement.height
-                );
-                
-                canvasCtx.strokeStyle = '#8e7af7';
-                canvasCtx.lineWidth = 2;
-                canvasCtx.stroke();
-            }
-        }
-    }
-
-    // Draw hands
-    if (handResults && handResults.multiHandLandmarks) {
-        for (const landmarks of handResults.multiHandLandmarks) {
-            drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS,
-                {color: '#8e7af7', lineWidth: 2});
-            drawLandmarks(canvasCtx, landmarks, {
-                color: '#8e7af7',
-                fillColor: '#8e7af7',
-                lineWidth: 1,
-                radius: 2
-            });
-        }
-    }
-
-    canvasCtx.restore();
-}
-
-// Calculate confidence of finger crossing face boundary
-function calculateFingerFaceConfidence(handLandmarks, boundaryPoints) {
-    if (boundaryPoints.length === 0) return 0;
-
-    // Get finger tips
-    const fingerTips = [4, 8, 12, 16, 20];
-    let maxConfidence = 0;
-
-    for (const tipIndex of fingerTips) {
-        const fingerTip = handLandmarks[tipIndex];
-        
-        // Find closest point on boundary
-        let minDist = Infinity;
-        for (let i = 0; i < boundaryPoints.length - 1; i++) {
-            const p1 = boundaryPoints[i];
-            const p2 = boundaryPoints[i + 1];
-            
-            // Calculate distance from point to line segment
-            const d = pointToLineDistance(fingerTip, p1, p2);
-            minDist = Math.min(minDist, d);
-        }
-
-        // Convert distance to confidence (closer = higher confidence)
-        const confidence = Math.max(0, Math.min(1, 1 - (minDist / 0.1)));
-        maxConfidence = Math.max(maxConfidence, confidence);
-    }
-
-    return maxConfidence;
-}
-
-// Calculate distance from point to line segment
-function pointToLineDistance(point, lineStart, lineEnd) {
-    const A = point.x - lineStart.x;
-    const B = point.y - lineStart.y;
-    const C = lineEnd.x - lineStart.x;
-    const D = lineEnd.y - lineStart.y;
-
-    const dot = A * C + B * D;
-    const lenSq = C * C + D * D;
-    let param = -1;
-
-    if (lenSq !== 0) {
-        param = dot / lenSq;
-    }
-
-    let xx, yy;
-
-    if (param < 0) {
-        xx = lineStart.x;
-        yy = lineStart.y;
-    } else if (param > 1) {
-        xx = lineEnd.x;
-        yy = lineEnd.y;
-    } else {
-        xx = lineStart.x + param * C;
-        yy = lineStart.y + param * D;
-    }
-
-    const dx = point.x - xx;
-    const dy = point.y - yy;
-
-    return Math.sqrt(dx * dx + dy * dy);
 }
 
 // Update confidence meter
@@ -383,9 +176,9 @@ function hasGetUserMedia() {
 
 // Enable webcam
 async function enableCam() {
-    if (!hands || !faceMesh) {
-        const initialized = await initializeMediaPipe();
-        if (!initialized) return;
+    if (!gestureRecognizer) {
+        alert("Please wait for model to load");
+        return;
     }
 
     if (webcamRunning) {
@@ -401,11 +194,9 @@ async function enableCam() {
         webcamRunning = true;
         enableWebcamButton.innerText = "DISABLE CAMERA";
 
-        const constraints = {
-            video: true
-        };
-
+        // Activate the webcam stream.
         try {
+            const constraints = { video: true };
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
             videoElement.srcObject = stream;
             videoElement.addEventListener("loadeddata", predictWebcam);
@@ -437,11 +228,104 @@ if (hasGetUserMedia()) {
     alert("getUserMedia() is not supported by your browser");
 }
 
+let lastVideoTime = -1;
+let results = undefined;
+const drawingUtils = new DrawingUtils(canvasCtx);
+
+// Function to check if hand is near face area
+function isHandNearFace(landmarks) {
+    if (!landmarks || landmarks.length === 0) return false;
+    
+    // Define face area boundaries (relative coordinates)
+    const faceArea = {
+        top: 0.6,    // Approximately mouth level
+        bottom: 0.8, // Lower chin/neck
+        left: 0.3,   // Left side of face
+        right: 0.7   // Right side of face
+    };
+
+    // Check if any landmarks are in the face area
+    return landmarks.some(point => {
+        return point.y >= faceArea.top &&
+               point.y <= faceArea.bottom &&
+               point.x >= faceArea.left &&
+               point.x <= faceArea.right;
+    });
+}
+
+// Draw face boundary box
+function drawFaceBoundary(ctx, width, height) {
+    const faceArea = {
+        top: 0.6,
+        bottom: 0.8,
+        left: 0.3,
+        right: 0.7
+    };
+
+    ctx.beginPath();
+    ctx.strokeStyle = '#8e7af7';
+    ctx.lineWidth = 2;
+    ctx.rect(
+        faceArea.left * width,
+        faceArea.top * height,
+        (faceArea.right - faceArea.left) * width,
+        (faceArea.bottom - faceArea.top) * height
+    );
+    ctx.stroke();
+}
+
 // Predict webcam
 async function predictWebcam() {
+    const webcamElement = videoElement;
+    
+    if (runningMode === "IMAGE") {
+        runningMode = "VIDEO";
+        await gestureRecognizer.setOptions({ runningMode: "VIDEO" });
+    }
+    
+    let nowInMs = Date.now();
+    if (videoElement.currentTime !== lastVideoTime) {
+        lastVideoTime = videoElement.currentTime;
+        results = gestureRecognizer.recognizeForVideo(videoElement, nowInMs);
+    }
+
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    canvasCtx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+
+    if (results.landmarks) {
+        for (const landmarks of results.landmarks) {
+            drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, {
+                color: "#8e7af7",
+                lineWidth: 2
+            });
+            drawingUtils.drawLandmarks(landmarks, {
+                color: "#8e7af7",
+                lineWidth: 1
+            });
+
+            if (isHandNearFace(landmarks)) {
+                showTextAlert();
+                handleBoundaryViolation();
+                updateConfidenceMeter(1.0);
+            } else {
+                hideTextAlert();
+                resetBoundaryTimer();
+                updateConfidenceMeter(0);
+            }
+        }
+    } else {
+        hideTextAlert();
+        resetBoundaryTimer();
+        updateConfidenceMeter(0);
+    }
+
+    // Draw face boundary
+    drawFaceBoundary(canvasCtx, canvasElement.width, canvasElement.height);
+
+    canvasCtx.restore();
+
     if (webcamRunning) {
-        await hands.send({image: videoElement});
-        await faceMesh.send({image: videoElement});
         window.requestAnimationFrame(predictWebcam);
     }
 }
@@ -449,6 +333,3 @@ async function predictWebcam() {
 // Initialize
 updateDimensions();
 window.addEventListener('resize', updateDimensions);
-
-// Initialize MediaPipe when the page loads
-window.addEventListener('load', initializeMediaPipe);
