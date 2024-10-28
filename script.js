@@ -50,24 +50,28 @@ function sendSignalToRelay() {
 
 // Initialize the GestureRecognizer
 const createGestureRecognizer = async () => {
-    const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
-    );
-    gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
-        baseOptions: {
-            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",
-            delegate: "GPU"
-        },
-        runningMode: runningMode,
-        numHands: 2,
-        minHandDetectionConfidence: 0.5,
-        minHandPresenceConfidence: 0.5,
-        minTrackingConfidence: 0.5
-    });
+    try {
+        const vision = await FilesetResolver.forVisionTasks(
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+        );
+        gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
+            baseOptions: {
+                modelAssetPath: "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",
+                delegate: "GPU"
+            },
+            runningMode: runningMode,
+            numHands: 2,
+            minHandDetectionConfidence: 0.5,
+            minHandPresenceConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+        console.log('GestureRecognizer initialized successfully');
+        enableWebcamButton.disabled = false;
+    } catch (error) {
+        console.error('Error initializing GestureRecognizer:', error);
+        alert('Error initializing models. Please check console and refresh the page.');
+    }
 };
-
-// Initialize MediaPipe
-createGestureRecognizer();
 
 // Set initial dimensions
 function updateDimensions() {
@@ -218,6 +222,7 @@ enableWebcamButton.style.left = '50%';
 enableWebcamButton.style.transform = 'translate(-50%, -50%)';
 enableWebcamButton.style.zIndex = '9';
 enableWebcamButton.classList.add('mdc-button', 'mdc-button--raised');
+enableWebcamButton.disabled = true; // Disable until model is loaded
 container.appendChild(enableWebcamButton);
 
 // Check webcam support
@@ -333,3 +338,6 @@ async function predictWebcam() {
 // Initialize
 updateDimensions();
 window.addEventListener('resize', updateDimensions);
+
+// Initialize GestureRecognizer when the page loads
+createGestureRecognizer();
