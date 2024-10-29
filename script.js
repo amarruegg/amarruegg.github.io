@@ -1,237 +1,287 @@
-// DOM Elements
 const videoElement = document.getElementById('input_video');
 const canvasElement = document.getElementById('output_canvas');
-const startButton = document.getElementById('start');
-const alertElement = document.getElementById('alert');
-const ctx = canvasElement.getContext('2d');
+const canvasCtx = canvasElement.getContext('2d');
+const textAlert = document.getElementById('text_alert');
+const nedryPopup = document.getElementById('nedry_popup');
+const nedryAudio = document.getElementById('nedry_audio');
+const container = document.querySelector('.container');
+const confidenceLevel = document.getElementById('confidence_level');
+const confidenceText = document.getElementById('confidence_text');
 
-// State
-let isRunning = false;
-let faceMesh = null;
-let hands = null;
-let boundaryPoints = [];
-let lastBoundaryViolation = 0;
-const VIOLATION_COOLDOWN = 1000; // 1 second cooldown between signals
-
-// Initialize video dimensions
-function initDimensions() {
-    canvasElement.width = videoElement.videoWidth || 640;
-    canvasElement.height = videoElement.videoHeight || 480;
-}
-
-// Initialize MediaPipe Face Mesh
-async function initFaceMesh() {
-    faceMesh = new FaceMesh({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
-    });
-
-    faceMesh.setOptions({
-        maxNumFaces: 1,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
-    });
-
-    faceMesh.onResults(onFaceMeshResults);
-    
-    console.log('FaceMesh initialized');
-    return faceMesh.initialize();
+// Set initial dimensions
+function updateDimensions() {
+    canvasElement.width = container.offsetWidth;
+    canvasElement.height = container.offsetHeight;
+    videoElement.width = container.offsetWidth;
+    videoElement.height = container.offsetHeight;
 }
 
 // Initialize MediaPipe Hands
-async function initHands() {
-    hands = new Hands({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-    });
-
-    hands.setOptions({
-        maxNumHands: 2,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
-    });
-
-    hands.onResults(onHandResults);
-    
-    console.log('Hands initialized');
-    return hands.initialize();
-}
-
-// Face Mesh Results Handler
-function onFaceMeshResults(results) {
-    if (!results.multiFaceLandmarks || !results.multiFaceLandmarks.length) {
-        boundaryPoints = [];
-        return;
+const hands = new Hands({
+    locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
     }
+});
 
-    const landmarks = results.multiFaceLandmarks[0];
-    
-    // Update boundary points (lower face)
-    const indices = [
-        234, 93, 132, 58, 172, 136, 150, 149, 176, 148, 152,
-        377, 400, 378, 379, 365, 397, 288, 361, 447
-    ];
-    boundaryPoints = indices.map(i => landmarks[i]);
+// Initialize MediaPipe Face Mesh
+const faceMesh = new FaceMesh({
+    locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+    }
+});
 
-    // Draw face mesh
-    ctx.save();
-    ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-    ctx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-    
-    // Draw mesh connections
-    drawConnectors(ctx, landmarks, FACEMESH_TESSELATION, 
-        {color: 'rgba(255,255,255,0.2)', lineWidth: 1});
-    
-    // Draw boundary line
-    if (boundaryPoints.length) {
-        ctx.beginPath();
-        ctx.moveTo(
-            boundaryPoints[0].x * canvasElement.width,
-            boundaryPoints[0].y * canvasElement.height
-        );
-        
-        for (let i = 1; i < boundaryPoints.length; i++) {
-            const xc = (boundaryPoints[i].x + boundaryPoints[i-1].x) / 2 * canvasElement.width;
-            const yc = (boundaryPoints[i].y + boundaryPoints[i-1].y) / 2 * canvasElement.height;
-            ctx.quadraticCurveTo(
-                boundaryPoints[i-1].x * canvasElement.width,
-                boundaryPoints[i-1].y * canvasElement.height,
-                xc, yc
-            );
+// Configure hands
+hands.setOptions({
+    maxNumHands: 2,
+    modelComplexity: 1,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+});
+
+// Configure face mesh
+faceMesh.setOptions({
+    maxNumFaces: 1,
+    refineLandmarks: true,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+});
+
+let faceLandmarks = null;
+let handResults = null;
+let boundaryPoints = [];
+let boundaryTimer = null;
+let isNedryShowing = false;
+let lastAlertTime = 0;
+
+// Handle hands results
+hands.onResults((results) => {
+    handResults = results;
+    if (results.multiHandLandmarks && boundaryPoints.length > 0) {
+        for (const landmarks of results.multiHandLandmarks) {
+            const confidence = calculateFingerFaceConfidence(landmarks, boundaryPoints);
+            updateConfidenceMeter(confidence);
+            
+            if (confidence > 0.8) {
+                showAlert();
+            }
         }
-        
-        ctx.strokeStyle = '#8e7af7';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+    } else {
+        updateConfidenceMeter(0);
     }
-    
-    ctx.restore();
-}
+});
 
-// Hand Results Handler
-function onHandResults(results) {
-    if (!results.multiHandLandmarks) return;
+// Handle face mesh results
+faceMesh.onResults((results) => {
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+    if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+        faceLandmarks = results.multiFaceLandmarks[0];
+        
+        // Get lower face boundary points
+        const lowerFaceIndices = [
+            234, // Left ear area
+            93, 132, 58, 172, 136, 150, 149, 176, 148, 152, // Left jaw line
+            377, 400, 378, 379, 365, 397, 288, 361, // Right jaw line
+            447  // Right ear area (symmetric with 234)
+        ];
+        boundaryPoints = lowerFaceIndices.map(index => faceLandmarks[index]);
+        
+        // Draw face mesh
+        for (const landmarks of results.multiFaceLandmarks) {
+            drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION,
+                {color: 'rgba(255, 255, 255, 0.2)', lineWidth: 1});
+            drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE,
+                {color: 'rgba(255, 255, 255, 0.4)'});
+            drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE,
+                {color: 'rgba(255, 255, 255, 0.4)'});
+            drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL,
+                {color: 'rgba(255, 255, 255, 0.4)'});
+            
+            // Draw smooth boundary line
+            if (boundaryPoints.length > 0) {
+                canvasCtx.beginPath();
+                canvasCtx.moveTo(
+                    boundaryPoints[0].x * canvasElement.width,
+                    boundaryPoints[0].y * canvasElement.height
+                );
+                
+                // Use quadratic curves for smoother line
+                for (let i = 1; i < boundaryPoints.length; i++) {
+                    const xc = (boundaryPoints[i].x + boundaryPoints[i-1].x) / 2 * canvasElement.width;
+                    const yc = (boundaryPoints[i].y + boundaryPoints[i-1].y) / 2 * canvasElement.height;
+                    canvasCtx.quadraticCurveTo(
+                        boundaryPoints[i-1].x * canvasElement.width,
+                        boundaryPoints[i-1].y * canvasElement.height,
+                        xc,
+                        yc
+                    );
+                }
+                // Close the path smoothly
+                const lastPoint = boundaryPoints[boundaryPoints.length-1];
+                const firstPoint = boundaryPoints[0];
+                const xc = (firstPoint.x + lastPoint.x) / 2 * canvasElement.width;
+                const yc = (firstPoint.y + lastPoint.y) / 2 * canvasElement.height;
+                canvasCtx.quadraticCurveTo(
+                    lastPoint.x * canvasElement.width,
+                    lastPoint.y * canvasElement.height,
+                    firstPoint.x * canvasElement.width,
+                    firstPoint.y * canvasElement.height
+                );
+                
+                canvasCtx.strokeStyle = '#8e7af7';
+                canvasCtx.lineWidth = 2;
+                canvasCtx.stroke();
+            }
+        }
+    }
 
     // Draw hands
-    for (const landmarks of results.multiHandLandmarks) {
-        drawConnectors(ctx, landmarks, HAND_CONNECTIONS, 
-            {color: '#8e7af7', lineWidth: 2});
-        drawLandmarks(ctx, landmarks, 
-            {color: '#8e7af7', fillColor: '#8e7af7', lineWidth: 1, radius: 2});
-        
-        // Check boundary violation
-        if (boundaryPoints.length && isHandNearBoundary(landmarks)) {
-            handleBoundaryViolation();
+    if (handResults && handResults.multiHandLandmarks) {
+        for (const landmarks of handResults.multiHandLandmarks) {
+            drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS,
+                {color: '#8e7af7', lineWidth: 2});
+            drawLandmarks(canvasCtx, landmarks, {
+                color: '#8e7af7',
+                fillColor: '#8e7af7',
+                lineWidth: 1,
+                radius: 2
+            });
         }
     }
-}
 
-// Check if hand is near boundary
-function isHandNearBoundary(handLandmarks) {
-    if (!boundaryPoints.length) return false;
+    canvasCtx.restore();
+});
 
+// Calculate confidence of finger crossing face boundary
+function calculateFingerFaceConfidence(handLandmarks, boundaryPoints) {
+    if (boundaryPoints.length === 0) return 0;
+
+    // Get finger tips
     const fingerTips = [4, 8, 12, 16, 20];
-    const threshold = 0.05; // Normalized distance threshold
+    let maxConfidence = 0;
 
-    return fingerTips.some(tipIdx => {
-        const tip = handLandmarks[tipIdx];
-        return boundaryPoints.some(point => {
-            const dist = Math.hypot(tip.x - point.x, tip.y - point.y);
-            return dist < threshold;
-        });
-    });
+    for (const tipIndex of fingerTips) {
+        const fingerTip = handLandmarks[tipIndex];
+        
+        // Find closest point on boundary
+        let minDist = Infinity;
+        for (let i = 0; i < boundaryPoints.length - 1; i++) {
+            const p1 = boundaryPoints[i];
+            const p2 = boundaryPoints[i + 1];
+            
+            // Calculate distance from point to line segment
+            const d = pointToLineDistance(fingerTip, p1, p2);
+            minDist = Math.min(minDist, d);
+        }
+
+        // Convert distance to confidence (closer = higher confidence)
+        const confidence = Math.max(0, Math.min(1, 1 - (minDist / 0.1)));
+        maxConfidence = Math.max(maxConfidence, confidence);
+    }
+
+    return maxConfidence;
 }
 
-// Handle boundary violation
-function handleBoundaryViolation() {
+// Calculate distance from point to line segment
+function pointToLineDistance(point, lineStart, lineEnd) {
+    const A = point.x - lineStart.x;
+    const B = point.y - lineStart.y;
+    const C = lineEnd.x - lineStart.x;
+    const D = lineEnd.y - lineStart.y;
+
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    let param = -1;
+
+    if (lenSq !== 0) {
+        param = dot / lenSq;
+    }
+
+    let xx, yy;
+
+    if (param < 0) {
+        xx = lineStart.x;
+        yy = lineStart.y;
+    } else if (param > 1) {
+        xx = lineEnd.x;
+        yy = lineEnd.y;
+    } else {
+        xx = lineStart.x + param * C;
+        yy = lineStart.y + param * D;
+    }
+
+    const dx = point.x - xx;
+    const dy = point.y - yy;
+
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+// Update confidence meter
+function updateConfidenceMeter(confidence) {
+    const percentage = Math.round(confidence * 100);
+    confidenceLevel.style.width = `${percentage}%`;
+    confidenceText.textContent = `${percentage}%`;
+}
+
+// Show alert
+function showAlert() {
     const now = Date.now();
-    if (now - lastBoundaryViolation < VIOLATION_COOLDOWN) return;
     
-    lastBoundaryViolation = now;
-    alertElement.style.display = 'block';
-    
-    // Send signal to local proxy
-    fetch('http://localhost:3001/tasmota/cm?cmnd=POWER1%20TOGGLE')
-        .catch(err => console.log('Proxy communication error:', err));
-    
-    // Hide alert after 1 second
-    setTimeout(() => {
-        alertElement.style.display = 'none';
-    }, 1000);
-}
+    // Show text alert immediately
+    if (now - lastAlertTime > 1000) {
+        textAlert.style.display = 'block';
+        textAlert.classList.add('fade-in');
+        lastAlertTime = now;
+    }
 
-// Camera setup
-async function setupCamera() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                width: 640,
-                height: 480
-            }
-        });
-        videoElement.srcObject = stream;
-        return new Promise(resolve => {
-            videoElement.onloadedmetadata = () => {
-                initDimensions();
-                resolve(videoElement);
-            };
-        });
-    } catch (err) {
-        console.error('Error accessing camera:', err);
-        throw err;
+    // Start Nedry alert timer if not already running
+    if (!boundaryTimer && !isNedryShowing) {
+        boundaryTimer = setTimeout(() => {
+            showNedryAlert();
+            // Send signal to Tasmota
+            fetch('http://localhost:3001/tasmota/cm?cmnd=POWER1%20TOGGLE')
+                .catch(err => console.log('Proxy communication error:', err));
+        }, 3000);
     }
 }
 
-// Main loop
-async function predictWebcam() {
-    if (!isRunning) return;
-    
-    if (videoElement.videoWidth) {
+// Show Nedry alert
+function showNedryAlert() {
+    if (!isNedryShowing) {
+        isNedryShowing = true;
+        nedryPopup.style.display = 'block';
+        nedryPopup.classList.add('fade-in');
+        nedryAudio.currentTime = 0;
+        nedryAudio.play();
+
+        setTimeout(() => {
+            nedryPopup.style.display = 'none';
+            nedryPopup.classList.remove('fade-in');
+            isNedryShowing = false;
+            boundaryTimer = null;
+        }, 4000);
+    }
+}
+
+// Set up camera
+const camera = new Camera(videoElement, {
+    onFrame: async () => {
         await hands.send({image: videoElement});
         await faceMesh.send({image: videoElement});
-    }
-    
-    requestAnimationFrame(predictWebcam);
-}
-
-// Start/Stop handler
-async function toggleCamera() {
-    try {
-        if (!isRunning) {
-            startButton.disabled = true;
-            startButton.textContent = 'Starting...';
-            
-            // Initialize everything
-            await Promise.all([
-                setupCamera(),
-                initFaceMesh(),
-                initHands()
-            ]);
-            
-            isRunning = true;
-            startButton.textContent = 'Disable Camera';
-            predictWebcam();
-        } else {
-            isRunning = false;
-            const stream = videoElement.srcObject;
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
-            videoElement.srcObject = null;
-            ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            startButton.textContent = 'Enable Camera';
-        }
-    } catch (err) {
-        console.error('Setup error:', err);
-        alert('Error setting up camera. Please check console and refresh.');
-        startButton.textContent = 'Enable Camera';
-    }
-    startButton.disabled = false;
-}
-
-// Event listeners
-startButton.addEventListener('click', toggleCamera);
-
-// Error handling
-window.addEventListener('error', function(e) {
-    console.error('Global error:', e.error);
-    alert('An error occurred. Please check console and refresh.');
+    },
+    width: container.offsetWidth,
+    height: container.offsetHeight
 });
+
+// Initialize dimensions
+updateDimensions();
+
+// Add window resize handling
+window.addEventListener('resize', updateDimensions);
+
+// Start camera and initialize MediaPipe
+camera.start();
+hands.initialize();
+faceMesh.initialize();
