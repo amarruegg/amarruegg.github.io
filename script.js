@@ -13,6 +13,15 @@ const countdownNumber = document.getElementById('countdown_number');
 // Configuration for proxy server
 const PROXY_URL = "http://localhost:3001";
 
+let faceLandmarks = null;
+let handResults = null;
+let boundaryPoints = [];
+let boundaryTimer = null;
+let isNedryShowing = false;
+let countdownInterval = null;
+let timeRemaining = 3;
+let webcamRunning = false;
+
 // Function to send signal to Tasmota relay
 function sendSignalToRelay() {
     const url = `${PROXY_URL}/tasmota/cm?cmnd=POWER1%20TOGGLE`;
@@ -49,14 +58,14 @@ function updateDimensions() {
 // Initialize MediaPipe Hands
 const hands = new Hands({
     locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${file}`;
     }
 });
 
 // Initialize MediaPipe Face Mesh
 const faceMesh = new FaceMesh({
     locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1646424915/${file}`;
     }
 });
 
@@ -75,15 +84,6 @@ faceMesh.setOptions({
     minDetectionConfidence: 0.5,
     minTrackingConfidence: 0.5
 });
-
-let faceLandmarks = null;
-let handResults = null;
-let boundaryPoints = [];
-let boundaryTimer = null;
-let isNedryShowing = false;
-let countdownInterval = null;
-let timeRemaining = 3;
-let webcamRunning = false;
 
 // Handle hands results
 hands.onResults((results) => {
@@ -430,5 +430,5 @@ Promise.all([
     faceMesh.initialize()
 ]).catch(error => {
     console.error('Error initializing:', error);
-    alert('Error initializing models');
+    alert('Error initializing models. Please check console and refresh the page.');
 });
