@@ -57,11 +57,10 @@ let lastAlertTime = 0;
 let countdownInterval = null;
 let timeRemaining = 3;
 let lastHandDetectionTime = 0;
-let lastConfidence = 0;
 let confidenceResetTimeout = null;
 let boundaryResetTimeout = null;
 
-const HAND_TIMEOUT = 200; // Time in ms to wait before considering hands lost
+const HAND_TIMEOUT = 150; // Reduced from 200ms to 150ms
 const CONFIDENCE_THRESHOLD = 0.8;
 
 // Handle hands results
@@ -69,27 +68,25 @@ hands.onResults((results) => {
     handResults = results;
     const now = Date.now();
     
-    // Update last hand detection time if hands are present
-    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-        lastHandDetectionTime = now;
+    // Clear any existing timeouts when we get new results
+    if (confidenceResetTimeout) {
+        clearTimeout(confidenceResetTimeout);
+        confidenceResetTimeout = null;
     }
     
-    // Only reset if hands have been missing for longer than HAND_TIMEOUT
+    // If no hands are detected
     if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-        if (now - lastHandDetectionTime > HAND_TIMEOUT) {
-            // Clear any pending reset timeout
-            if (confidenceResetTimeout) {
-                clearTimeout(confidenceResetTimeout);
-            }
-            // Set a new timeout to reset confidence
-            confidenceResetTimeout = setTimeout(() => {
-                updateConfidenceMeter(0);
-                hideTextAlert();
-                resetBoundaryTimer();
-            }, HAND_TIMEOUT);
-        }
+        // Start a quick decay of confidence
+        confidenceResetTimeout = setTimeout(() => {
+            updateConfidenceMeter(0);
+            hideTextAlert();
+            resetBoundaryTimer();
+        }, HAND_TIMEOUT);
         return;
     }
+    
+    // Update last hand detection time
+    lastHandDetectionTime = now;
 
     if (boundaryPoints.length > 0) {
         let maxCurrentConfidence = 0;
@@ -101,22 +98,14 @@ hands.onResults((results) => {
             
             if (confidence > CONFIDENCE_THRESHOLD) {
                 isCrossing = true;
-                lastConfidence = confidence;
                 showAlert();
             }
         }
-
-        // Smooth confidence transitions
-        if (maxCurrentConfidence > lastConfidence) {
-            lastConfidence = maxCurrentConfidence;
-        } else {
-            lastConfidence = lastConfidence * 0.8 + maxCurrentConfidence * 0.2;
-        }
         
-        updateConfidenceMeter(lastConfidence);
+        updateConfidenceMeter(maxCurrentConfidence);
 
         if (!isCrossing) {
-            // Add delay before resetting boundary
+            // Add small delay before resetting boundary
             if (boundaryResetTimeout) {
                 clearTimeout(boundaryResetTimeout);
             }
