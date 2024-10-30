@@ -58,9 +58,9 @@ let countdownInterval = null;
 let timeRemaining = 3;
 let lastHandDetectionTime = 0;
 let confidenceResetTimeout = null;
-let boundaryResetTimeout = null;
+let isBoundaryViolation = false;
 
-const HAND_TIMEOUT = 150; // Reduced from 200ms to 150ms
+const HAND_TIMEOUT = 150;
 const CONFIDENCE_THRESHOLD = 0.8;
 
 // Handle hands results
@@ -76,11 +76,12 @@ hands.onResults((results) => {
     
     // If no hands are detected
     if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-        // Start a quick decay of confidence
+        // Quick reset of confidence and boundary state
         confidenceResetTimeout = setTimeout(() => {
             updateConfidenceMeter(0);
             hideTextAlert();
             resetBoundaryTimer();
+            isBoundaryViolation = false;
         }, HAND_TIMEOUT);
         return;
     }
@@ -90,32 +91,37 @@ hands.onResults((results) => {
 
     if (boundaryPoints.length > 0) {
         let maxCurrentConfidence = 0;
-        let isCrossing = false;
+        let currentBoundaryViolation = false;
         
         for (const landmarks of results.multiHandLandmarks) {
             const confidence = calculateFingerFaceConfidence(landmarks, boundaryPoints);
             maxCurrentConfidence = Math.max(maxCurrentConfidence, confidence);
             
             if (confidence > CONFIDENCE_THRESHOLD) {
-                isCrossing = true;
-                showAlert();
+                currentBoundaryViolation = true;
             }
         }
         
         updateConfidenceMeter(maxCurrentConfidence);
 
-        if (!isCrossing) {
-            // Add small delay before resetting boundary
-            if (boundaryResetTimeout) {
-                clearTimeout(boundaryResetTimeout);
+        // Handle boundary violation state changes
+        if (currentBoundaryViolation) {
+            if (!isBoundaryViolation) {
+                // Start new violation
+                isBoundaryViolation = true;
+                showAlert();
             }
-            boundaryResetTimeout = setTimeout(() => {
+        } else {
+            if (isBoundaryViolation) {
+                // End violation
+                isBoundaryViolation = false;
                 hideTextAlert();
                 resetBoundaryTimer();
-            }, HAND_TIMEOUT);
+            }
         }
     } else {
         updateConfidenceMeter(0);
+        isBoundaryViolation = false;
     }
 });
 
