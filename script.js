@@ -57,7 +57,6 @@ let lastAlertTime = 0;
 let countdownInterval = null;
 let timeRemaining = 3;
 let lastHandDetectionTime = 0;
-let confidenceResetTimeout = null;
 let isBoundaryViolation = false;
 
 const HAND_TIMEOUT = 150;
@@ -67,30 +66,12 @@ const CONFIDENCE_THRESHOLD = 0.8;
 hands.onResults((results) => {
     handResults = results;
     const now = Date.now();
+    let maxCurrentConfidence = 0;
     
-    // Clear any existing timeouts when we get new results
-    if (confidenceResetTimeout) {
-        clearTimeout(confidenceResetTimeout);
-        confidenceResetTimeout = null;
-    }
-    
-    // If no hands are detected
-    if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-        // Quick reset of confidence and boundary state
-        confidenceResetTimeout = setTimeout(() => {
-            updateConfidenceMeter(0);
-            hideTextAlert();
-            resetBoundaryTimer();
-            isBoundaryViolation = false;
-        }, HAND_TIMEOUT);
-        return;
-    }
-    
-    // Update last hand detection time
-    lastHandDetectionTime = now;
-
-    if (boundaryPoints.length > 0) {
-        let maxCurrentConfidence = 0;
+    // Calculate current confidence if hands are present
+    if (results.multiHandLandmarks && 
+        results.multiHandLandmarks.length > 0 && 
+        boundaryPoints.length > 0) {
         
         // Calculate maximum confidence across all hands
         for (const landmarks of results.multiHandLandmarks) {
@@ -98,26 +79,33 @@ hands.onResults((results) => {
             maxCurrentConfidence = Math.max(maxCurrentConfidence, confidence);
         }
         
-        updateConfidenceMeter(maxCurrentConfidence);
-
-        // Handle boundary violation based on current confidence
+        // Update last detection time only if confidence is high enough
         if (maxCurrentConfidence > CONFIDENCE_THRESHOLD) {
-            if (!isBoundaryViolation) {
-                // Start new violation
-                isBoundaryViolation = true;
-                showAlert();
-            }
-        } else {
-            // Reset if confidence drops below threshold
-            if (isBoundaryViolation) {
-                isBoundaryViolation = false;
-                hideTextAlert();
-                resetBoundaryTimer();
-            }
+            lastHandDetectionTime = now;
+        }
+    }
+    
+    // Update confidence meter
+    updateConfidenceMeter(maxCurrentConfidence);
+    
+    // Check if we should maintain boundary violation
+    const timeSinceLastDetection = now - lastHandDetectionTime;
+    const shouldMaintainViolation = maxCurrentConfidence > CONFIDENCE_THRESHOLD && 
+                                  timeSinceLastDetection < HAND_TIMEOUT;
+    
+    if (shouldMaintainViolation) {
+        // Start or maintain violation
+        if (!isBoundaryViolation) {
+            isBoundaryViolation = true;
+            showAlert();
         }
     } else {
-        updateConfidenceMeter(0);
-        isBoundaryViolation = false;
+        // End violation
+        if (isBoundaryViolation) {
+            isBoundaryViolation = false;
+            hideTextAlert();
+            resetBoundaryTimer();
+        }
     }
 });
 
