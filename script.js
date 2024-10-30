@@ -91,29 +91,25 @@ hands.onResults((results) => {
 
     if (boundaryPoints.length > 0) {
         let maxCurrentConfidence = 0;
-        let currentBoundaryViolation = false;
         
+        // Calculate maximum confidence across all hands
         for (const landmarks of results.multiHandLandmarks) {
             const confidence = calculateFingerFaceConfidence(landmarks, boundaryPoints);
             maxCurrentConfidence = Math.max(maxCurrentConfidence, confidence);
-            
-            if (confidence > CONFIDENCE_THRESHOLD) {
-                currentBoundaryViolation = true;
-            }
         }
         
         updateConfidenceMeter(maxCurrentConfidence);
 
-        // Handle boundary violation state changes
-        if (currentBoundaryViolation) {
+        // Handle boundary violation based on current confidence
+        if (maxCurrentConfidence > CONFIDENCE_THRESHOLD) {
             if (!isBoundaryViolation) {
                 // Start new violation
                 isBoundaryViolation = true;
                 showAlert();
             }
         } else {
+            // Reset if confidence drops below threshold
             if (isBoundaryViolation) {
-                // End violation
                 isBoundaryViolation = false;
                 hideTextAlert();
                 resetBoundaryTimer();
