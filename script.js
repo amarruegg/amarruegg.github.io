@@ -7,6 +7,8 @@ const nedryAudio = document.getElementById('nedry_audio');
 const container = document.querySelector('.container');
 const confidenceLevel = document.getElementById('confidence_level');
 const confidenceText = document.getElementById('confidence_text');
+const countdownContainer = document.getElementById('countdown_container');
+const countdownNumber = document.getElementById('countdown_number');
 
 // Set initial dimensions
 function updateDimensions() {
@@ -52,18 +54,34 @@ let boundaryPoints = [];
 let boundaryTimer = null;
 let isNedryShowing = false;
 let lastAlertTime = 0;
+let countdownInterval = null;
+let timeRemaining = 3;
 
 // Handle hands results
 hands.onResults((results) => {
     handResults = results;
-    if (results.multiHandLandmarks && boundaryPoints.length > 0) {
+    // Reset confidence if no hands are detected
+    if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+        updateConfidenceMeter(0);
+        hideTextAlert();
+        resetBoundaryTimer();
+        return;
+    }
+
+    if (boundaryPoints.length > 0) {
+        let isCrossing = false;
         for (const landmarks of results.multiHandLandmarks) {
             const confidence = calculateFingerFaceConfidence(landmarks, boundaryPoints);
             updateConfidenceMeter(confidence);
             
             if (confidence > 0.8) {
+                isCrossing = true;
                 showAlert();
             }
+        }
+        if (!isCrossing) {
+            hideTextAlert();
+            resetBoundaryTimer();
         }
     } else {
         updateConfidenceMeter(0);
@@ -238,13 +256,43 @@ function showAlert() {
 
     // Start Nedry alert timer if not already running
     if (!boundaryTimer && !isNedryShowing) {
+        timeRemaining = 3;
+        updateCountdown();
+        showCountdown();
+        
         boundaryTimer = setTimeout(() => {
             showNedryAlert();
             // Send signal to Tasmota
             fetch('http://localhost:3001/tasmota/cm?cmnd=POWER1%20TOGGLE')
                 .catch(err => console.log('Proxy communication error:', err));
         }, 3000);
+
+        // Start countdown
+        if (countdownInterval) clearInterval(countdownInterval);
+        countdownInterval = setInterval(() => {
+            timeRemaining--;
+            updateCountdown();
+            if (timeRemaining <= 0) {
+                clearInterval(countdownInterval);
+                hideCountdown();
+            }
+        }, 1000);
     }
+}
+
+// Show countdown
+function showCountdown() {
+    countdownContainer.style.display = 'flex';
+}
+
+// Hide countdown
+function hideCountdown() {
+    countdownContainer.style.display = 'none';
+}
+
+// Update countdown display
+function updateCountdown() {
+    countdownNumber.textContent = timeRemaining;
 }
 
 // Show Nedry alert
@@ -262,6 +310,27 @@ function showNedryAlert() {
             isNedryShowing = false;
             boundaryTimer = null;
         }, 4000);
+    }
+}
+
+// Reset boundary timer
+function resetBoundaryTimer() {
+    if (boundaryTimer) {
+        clearTimeout(boundaryTimer);
+        boundaryTimer = null;
+    }
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+    }
+    hideCountdown();
+}
+
+// Hide text alert
+function hideTextAlert() {
+    if (textAlert.style.display === 'block') {
+        textAlert.style.display = 'none';
+        textAlert.classList.remove('fade-in');
     }
 }
 
