@@ -56,32 +56,74 @@ let isNedryShowing = false;
 let lastAlertTime = 0;
 let countdownInterval = null;
 let timeRemaining = 3;
+let lastHandDetectionTime = 0;
+let lastConfidence = 0;
+let confidenceResetTimeout = null;
+let boundaryResetTimeout = null;
+
+const HAND_TIMEOUT = 200; // Time in ms to wait before considering hands lost
+const CONFIDENCE_THRESHOLD = 0.8;
 
 // Handle hands results
 hands.onResults((results) => {
     handResults = results;
-    // Reset confidence if no hands are detected
+    const now = Date.now();
+    
+    // Update last hand detection time if hands are present
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        lastHandDetectionTime = now;
+    }
+    
+    // Only reset if hands have been missing for longer than HAND_TIMEOUT
     if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-        updateConfidenceMeter(0);
-        hideTextAlert();
-        resetBoundaryTimer();
+        if (now - lastHandDetectionTime > HAND_TIMEOUT) {
+            // Clear any pending reset timeout
+            if (confidenceResetTimeout) {
+                clearTimeout(confidenceResetTimeout);
+            }
+            // Set a new timeout to reset confidence
+            confidenceResetTimeout = setTimeout(() => {
+                updateConfidenceMeter(0);
+                hideTextAlert();
+                resetBoundaryTimer();
+            }, HAND_TIMEOUT);
+        }
         return;
     }
 
     if (boundaryPoints.length > 0) {
+        let maxCurrentConfidence = 0;
         let isCrossing = false;
+        
         for (const landmarks of results.multiHandLandmarks) {
             const confidence = calculateFingerFaceConfidence(landmarks, boundaryPoints);
-            updateConfidenceMeter(confidence);
+            maxCurrentConfidence = Math.max(maxCurrentConfidence, confidence);
             
-            if (confidence > 0.8) {
+            if (confidence > CONFIDENCE_THRESHOLD) {
                 isCrossing = true;
+                lastConfidence = confidence;
                 showAlert();
             }
         }
+
+        // Smooth confidence transitions
+        if (maxCurrentConfidence > lastConfidence) {
+            lastConfidence = maxCurrentConfidence;
+        } else {
+            lastConfidence = lastConfidence * 0.8 + maxCurrentConfidence * 0.2;
+        }
+        
+        updateConfidenceMeter(lastConfidence);
+
         if (!isCrossing) {
-            hideTextAlert();
-            resetBoundaryTimer();
+            // Add delay before resetting boundary
+            if (boundaryResetTimeout) {
+                clearTimeout(boundaryResetTimeout);
+            }
+            boundaryResetTimeout = setTimeout(() => {
+                hideTextAlert();
+                resetBoundaryTimer();
+            }, HAND_TIMEOUT);
         }
     } else {
         updateConfidenceMeter(0);
