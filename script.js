@@ -9,6 +9,8 @@ const confidenceLevel = document.getElementById('confidence_level');
 const confidenceText = document.getElementById('confidence_text');
 const countdownContainer = document.getElementById('countdown_container');
 const countdownNumber = document.getElementById('countdown_number');
+const toggleButton = document.getElementById('toggle_mode');
+const modeText = document.getElementById('mode_text');
 
 // Set initial dimensions
 function updateDimensions() {
@@ -58,9 +60,65 @@ let countdownInterval = null;
 let timeRemaining = 3;
 let lastHandDetectionTime = 0;
 let isBoundaryViolation = false;
+let isEyeMode = false;
 
 const HAND_TIMEOUT = 150;
 const CONFIDENCE_THRESHOLD = 0.8;
+const EYE_BOUNDARY_OFFSET = 0.025; // About a quarter inch at typical webcam distance
+
+// Toggle mode handler
+toggleButton.addEventListener('click', () => {
+    isEyeMode = !isEyeMode;
+    toggleButton.textContent = isEyeMode ? 'Switch to Beard Boundary' : 'Switch to Eye Boundary';
+    modeText.textContent = isEyeMode ? 'Eye Boundary' : 'Beard Boundary';
+});
+
+// Get boundary points based on current mode
+function getBoundaryPoints(faceLandmarks) {
+    if (!faceLandmarks) return [];
+
+    if (isEyeMode) {
+        // Combined left and right eye points
+        const eyeIndices = [
+            // Left eye
+            33, 246, 161, 160, 159, 158, 157, 173, 133, 155, 154, 153, 145, 144, 163, 7,
+            // Right eye
+            362, 398, 384, 385, 386, 387, 388, 466, 263, 249, 390, 373, 374, 380, 381, 382
+        ];
+        
+        const points = eyeIndices.map(index => {
+            const point = faceLandmarks[index];
+            // Create offset points for detection (invisible)
+            return {
+                x: point.x,
+                y: point.y,
+                // Store original points for drawing
+                originalX: point.x,
+                originalY: point.y
+            };
+        });
+
+        // Add offset to detection points
+        points.forEach(point => {
+            const centerX = 0.5;
+            const centerY = 0.5;
+            // Move point away from center of face
+            point.x += (point.x - centerX) * EYE_BOUNDARY_OFFSET;
+            point.y += (point.y - centerY) * EYE_BOUNDARY_OFFSET;
+        });
+
+        return points;
+    } else {
+        // Original beard boundary points
+        const lowerFaceIndices = [
+            234, // Left ear area
+            93, 132, 58, 172, 136, 150, 149, 176, 148, 152, // Left jaw line
+            377, 400, 378, 379, 365, 397, 288, 361, // Right jaw line
+            447  // Right ear area (symmetric with 234)
+        ];
+        return lowerFaceIndices.map(index => faceLandmarks[index]);
+    }
+}
 
 // Handle hands results
 hands.onResults((results) => {
@@ -117,15 +175,7 @@ faceMesh.onResults((results) => {
 
     if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
         faceLandmarks = results.multiFaceLandmarks[0];
-        
-        // Get lower face boundary points
-        const lowerFaceIndices = [
-            234, // Left ear area
-            93, 132, 58, 172, 136, 150, 149, 176, 148, 152, // Left jaw line
-            377, 400, 378, 379, 365, 397, 288, 361, // Right jaw line
-            447  // Right ear area (symmetric with 234)
-        ];
-        boundaryPoints = lowerFaceIndices.map(index => faceLandmarks[index]);
+        boundaryPoints = getBoundaryPoints(faceLandmarks);
         
         // Draw face mesh
         for (const landmarks of results.multiFaceLandmarks) {
@@ -138,35 +188,48 @@ faceMesh.onResults((results) => {
             drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL,
                 {color: 'rgba(255, 255, 255, 0.4)'});
             
-            // Draw smooth boundary line
+            // Draw boundary line
             if (boundaryPoints.length > 0) {
                 canvasCtx.beginPath();
+                // Use original coordinates for drawing in eye mode
+                const firstPoint = isEyeMode ? boundaryPoints[0] : boundaryPoints[0];
                 canvasCtx.moveTo(
-                    boundaryPoints[0].x * canvasElement.width,
-                    boundaryPoints[0].y * canvasElement.height
+                    (isEyeMode ? firstPoint.originalX : firstPoint.x) * canvasElement.width,
+                    (isEyeMode ? firstPoint.originalY : firstPoint.y) * canvasElement.height
                 );
                 
                 // Use quadratic curves for smoother line
                 for (let i = 1; i < boundaryPoints.length; i++) {
-                    const xc = (boundaryPoints[i].x + boundaryPoints[i-1].x) / 2 * canvasElement.width;
-                    const yc = (boundaryPoints[i].y + boundaryPoints[i-1].y) / 2 * canvasElement.height;
+                    const current = isEyeMode ? boundaryPoints[i] : boundaryPoints[i];
+                    const prev = isEyeMode ? boundaryPoints[i-1] : boundaryPoints[i-1];
+                    
+                    const xc = ((isEyeMode ? current.originalX : current.x) + 
+                               (isEyeMode ? prev.originalX : prev.x)) / 2 * canvasElement.width;
+                    const yc = ((isEyeMode ? current.originalY : current.y) + 
+                               (isEyeMode ? prev.originalY : prev.y)) / 2 * canvasElement.height;
+                    
                     canvasCtx.quadraticCurveTo(
-                        boundaryPoints[i-1].x * canvasElement.width,
-                        boundaryPoints[i-1].y * canvasElement.height,
+                        (isEyeMode ? prev.originalX : prev.x) * canvasElement.width,
+                        (isEyeMode ? prev.originalY : prev.y) * canvasElement.height,
                         xc,
                         yc
                     );
                 }
+                
                 // Close the path smoothly
-                const lastPoint = boundaryPoints[boundaryPoints.length-1];
-                const firstPoint = boundaryPoints[0];
-                const xc = (firstPoint.x + lastPoint.x) / 2 * canvasElement.width;
-                const yc = (firstPoint.y + lastPoint.y) / 2 * canvasElement.height;
+                const lastPoint = isEyeMode ? boundaryPoints[boundaryPoints.length-1] : boundaryPoints[boundaryPoints.length-1];
+                const firstPointClose = isEyeMode ? boundaryPoints[0] : boundaryPoints[0];
+                
+                const xc = ((isEyeMode ? firstPointClose.originalX : firstPointClose.x) + 
+                           (isEyeMode ? lastPoint.originalX : lastPoint.x)) / 2 * canvasElement.width;
+                const yc = ((isEyeMode ? firstPointClose.originalY : firstPointClose.y) + 
+                           (isEyeMode ? lastPoint.originalY : lastPoint.y)) / 2 * canvasElement.height;
+                
                 canvasCtx.quadraticCurveTo(
-                    lastPoint.x * canvasElement.width,
-                    lastPoint.y * canvasElement.height,
-                    firstPoint.x * canvasElement.width,
-                    firstPoint.y * canvasElement.height
+                    (isEyeMode ? lastPoint.originalX : lastPoint.x) * canvasElement.width,
+                    (isEyeMode ? lastPoint.originalY : lastPoint.y) * canvasElement.height,
+                    (isEyeMode ? firstPointClose.originalX : firstPointClose.x) * canvasElement.width,
+                    (isEyeMode ? firstPointClose.originalY : firstPointClose.y) * canvasElement.height
                 );
                 
                 canvasCtx.strokeStyle = '#8e7af7';
@@ -210,8 +273,14 @@ function calculateFingerFaceConfidence(handLandmarks, boundaryPoints) {
             const p1 = boundaryPoints[i];
             const p2 = boundaryPoints[i + 1];
             
+            // Use offset points for detection in eye mode
+            const p1x = isEyeMode ? p1.x : p1.x;
+            const p1y = isEyeMode ? p1.y : p1.y;
+            const p2x = isEyeMode ? p2.x : p2.x;
+            const p2y = isEyeMode ? p2.y : p2.y;
+            
             // Calculate distance from point to line segment
-            const d = pointToLineDistance(fingerTip, p1, p2);
+            const d = pointToLineDistance(fingerTip, {x: p1x, y: p1y}, {x: p2x, y: p2y});
             minDist = Math.min(minDist, d);
         }
 
