@@ -110,26 +110,14 @@ function getBoundaryPoints(faceLandmarks) {
             return points;
         }
         case 'scalp': {
-            // Mirror the beard boundary points vertically
-            const lowerFaceIndices = [
+            // Specific scalp boundary points
+            const scalpIndices = [
                 234, // Left ear area
-                93, 132, 58, 172, 136, 150, 149, 176, 148, 152, // Left jaw line
-                377, 400, 378, 379, 365, 397, 288, 361, // Right jaw line
-                447  // Right ear area
+                127, 162, 21, 54, 103, 67, 109, 10, // Left scalp
+                338, 297, 332, 284, 251, 389, 356, // Right scalp
+                454  // Right ear area
             ];
-            
-            // Get the beard points first
-            const beardPoints = lowerFaceIndices.map(index => faceLandmarks[index]);
-            
-            // Find the vertical center of the face for mirroring
-            const nose_tip = faceLandmarks[1]; // Nose tip landmark
-            const face_center_y = nose_tip.y;
-            
-            // Mirror the points vertically around the face center
-            return beardPoints.map(point => ({
-                x: point.x, // Keep x coordinate the same
-                y: face_center_y - (point.y - face_center_y) // Mirror y coordinate
-            }));
+            return scalpIndices.map(index => faceLandmarks[index]);
         }
         default: { // beard mode
             // Original beard boundary points
