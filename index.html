@@ -3,7 +3,7 @@
 <head>
     <title>Hand and Face Tracking</title>
     <style>
-        /* Previous styles remain the same until header styles */
+        /* Previous styles remain the same until control-panel */
         body {
             margin: 0;
             padding: 20px;
@@ -15,6 +15,73 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             color: white;
         }
+
+        /* Modern mode selector */
+        .mode-selector {
+            width: 640px;
+            margin-bottom: 16px;
+            background: #101014;
+            border-radius: 12px;
+            padding: 16px;
+            box-sizing: border-box;
+            display: flex;
+            gap: 12px;
+            border: 1px solid #27272a;
+        }
+
+        .mode-button {
+            flex: 1;
+            background: rgba(142, 122, 247, 0.1);
+            color: #a1a1aa;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mode-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, #8e7af7, #818cf8);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .mode-button span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .mode-button:hover {
+            color: white;
+        }
+
+        .mode-button:hover::before {
+            opacity: 0.1;
+        }
+
+        .mode-button.active {
+            background: #8e7af7;
+            color: white;
+        }
+
+        .mode-button.active::before {
+            opacity: 1;
+        }
+
+        /* Rest of the existing styles */
         .header {
             width: 100%;
             max-width: 640px;
@@ -48,37 +115,6 @@
             margin: 0;
             padding: 0;
         }
-        /* Add new control panel styles */
-        .control-panel {
-            width: 640px;
-            margin-bottom: 16px;
-            background: #101014;
-            border-radius: 12px;
-            padding: 16px;
-            box-sizing: border-box;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border: 1px solid #27272a;
-        }
-        .control-panel button {
-            background: #8e7af7;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: opacity 0.2s ease;
-        }
-        .control-panel button:hover {
-            opacity: 0.9;
-        }
-        .control-panel .mode-label {
-            color: #a1a1aa;
-            font-size: 14px;
-        }
-        /* Rest of the previous styles remain the same */
         .container {
             position: relative;
             width: 640px;
@@ -220,9 +256,10 @@
         </nav>
     </header>
 
-    <div class="control-panel">
-        <span class="mode-label">Current Mode: <span id="mode_text">Beard Boundary</span></span>
-        <button id="toggle_mode">Switch to Eye Boundary</button>
+    <div class="mode-selector">
+        <button class="mode-button active" data-mode="beard"><span>Beard Boundary</span></button>
+        <button class="mode-button" data-mode="eyes"><span>Eye Boundary</span></button>
+        <button class="mode-button" data-mode="scalp"><span>Scalp Boundary</span></button>
     </div>
 
     <div class="container">
