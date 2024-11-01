@@ -1,4 +1,3 @@
-// Previous initialization code remains the same until mode variables
 const videoElement = document.getElementById('input_video');
 const canvasElement = document.getElementById('output_canvas');
 const canvasCtx = canvasElement.getContext('2d');
@@ -111,21 +110,26 @@ function getBoundaryPoints(faceLandmarks) {
             return points;
         }
         case 'scalp': {
-            // Top of head and hairline points
-            const scalpIndices = [
-                10,  // Top of forehead
-                108, 337, 336, 335, 334, 333, 332, 331, // Left hairline
-                330, 329, 328, 327, 326, 325, 324, 323, // Center hairline
-                322, 321, 320, 319, 318, 317, 316, 315, // Right hairline
-                314, 313, 312, 311, 310, 309, 308, 307, // Far right hairline
-                306, 305, 304, 303, 302, 301, 300, 299, // Back right
-                298, 297, 296, 295, 294, 293, 292, 291, // Back center
-                290, 289, 288, 287, 286, 285, 284, 283, // Back left
-                282, 281, 280, 279, 278, 277, 276, 275, // Far left
-                274, 273, 272, 271, 270, 269, 268, 267  // Return to front
+            // Mirror the beard boundary points vertically
+            const lowerFaceIndices = [
+                234, // Left ear area
+                93, 132, 58, 172, 136, 150, 149, 176, 148, 152, // Left jaw line
+                377, 400, 378, 379, 365, 397, 288, 361, // Right jaw line
+                447  // Right ear area
             ];
             
-            return scalpIndices.map(index => faceLandmarks[index]);
+            // Get the beard points first
+            const beardPoints = lowerFaceIndices.map(index => faceLandmarks[index]);
+            
+            // Find the vertical center of the face for mirroring
+            const nose_tip = faceLandmarks[1]; // Nose tip landmark
+            const face_center_y = nose_tip.y;
+            
+            // Mirror the points vertically around the face center
+            return beardPoints.map(point => ({
+                x: point.x, // Keep x coordinate the same
+                y: face_center_y - (point.y - face_center_y) // Mirror y coordinate
+            }));
         }
         default: { // beard mode
             // Original beard boundary points
@@ -311,9 +315,6 @@ function calculateFingerFaceConfidence(handLandmarks, boundaryPoints) {
 
     return maxConfidence;
 }
-
-// Rest of the utility functions remain exactly the same
-// (pointToLineDistance, updateConfidenceMeter, showAlert, etc.)
 
 // Calculate distance from point to line segment
 function pointToLineDistance(point, lineStart, lineEnd) {
