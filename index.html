@@ -3,7 +3,7 @@
 <head>
     <title>Hand and Face Tracking</title>
     <style>
-        /* Previous styles remain exactly the same */
+        /* Previous styles remain the same until header styles */
         body {
             margin: 0;
             padding: 20px;
@@ -48,6 +48,37 @@
             margin: 0;
             padding: 0;
         }
+        /* Add new control panel styles */
+        .control-panel {
+            width: 640px;
+            margin-bottom: 16px;
+            background: #101014;
+            border-radius: 12px;
+            padding: 16px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid #27272a;
+        }
+        .control-panel button {
+            background: #8e7af7;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+        .control-panel button:hover {
+            opacity: 0.9;
+        }
+        .control-panel .mode-label {
+            color: #a1a1aa;
+            font-size: 14px;
+        }
+        /* Rest of the previous styles remain the same */
         .container {
             position: relative;
             width: 640px;
@@ -188,6 +219,11 @@
             </ul>
         </nav>
     </header>
+
+    <div class="control-panel">
+        <span class="mode-label">Current Mode: <span id="mode_text">Beard Boundary</span></span>
+        <button id="toggle_mode">Switch to Eye Boundary</button>
+    </div>
 
     <div class="container">
         <video id="input_video"></video>
