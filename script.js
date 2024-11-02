@@ -121,7 +121,7 @@ function getBoundaryPoints(faceLandmarks) {
 
             // Points that need to be offset higher
             const offsetPoints = new Set([54, 103, 67, 109, 10, 338, 297, 332, 284]);
-            const SCALP_OFFSET = 0.1; // Approximately 1 inch higher
+            const SCALP_OFFSET = 0.05; // Approximately .5 inch higher
 
             return scalpIndices.map(index => {
                 const point = faceLandmarks[index];
