@@ -113,11 +113,27 @@ function getBoundaryPoints(faceLandmarks) {
             // Specific scalp boundary points
             const scalpIndices = [
                 234, // Left ear area
-                127, 162, 21, 54, 103, 67, 109, 10, // Left scalp
-                338, 297, 332, 284, 251, 389, 356, // Right scalp
+                127, 162, 21, // Left side points (no offset)
+                54, 103, 67, 109, 10, 338, 297, 332, 284, // Top points (with offset)
+                251, 389, 356, // Right side points (no offset)
                 454  // Right ear area
             ];
-            return scalpIndices.map(index => faceLandmarks[index]);
+
+            // Points that need to be offset higher
+            const offsetPoints = new Set([54, 103, 67, 109, 10, 338, 297, 332, 284]);
+            const SCALP_OFFSET = 0.1; // Approximately 1 inch higher
+
+            return scalpIndices.map(index => {
+                const point = faceLandmarks[index];
+                if (offsetPoints.has(index)) {
+                    // Move point higher by reducing y coordinate
+                    return {
+                        x: point.x,
+                        y: point.y - SCALP_OFFSET
+                    };
+                }
+                return point;
+            });
         }
         default: { // beard mode
             // Original beard boundary points
