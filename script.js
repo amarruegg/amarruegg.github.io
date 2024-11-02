@@ -59,29 +59,34 @@ let countdownInterval = null;
 let timeRemaining = 3;
 let lastHandDetectionTime = 0;
 let isBoundaryViolation = false;
-let currentMode = 'beard';
+let activeModes = new Set(); // Replace currentMode with Set of active modes
 
 const HAND_TIMEOUT = 150;
 const CONFIDENCE_THRESHOLD = 0.8;
 const EYE_BOUNDARY_OFFSET = 0.025; // About a quarter inch at typical webcam distance
+const SCALP_OFFSET = 0.1; // Approximately 1 inch higher
 
 // Mode selector handler
 modeButtons.forEach(button => {
     button.addEventListener('click', () => {
-        // Update active state
-        modeButtons.forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-        currentMode = button.dataset.mode;
+        const mode = button.dataset.mode;
+        // Toggle mode active state
+        if (activeModes.has(mode)) {
+            activeModes.delete(mode);
+            button.classList.remove('active');
+        } else {
+            activeModes.add(mode);
+            button.classList.add('active');
+        }
     });
 });
 
-// Get boundary points based on current mode
-function getBoundaryPoints(faceLandmarks) {
+// Get boundary points for a specific mode
+function getBoundaryPointsForMode(faceLandmarks, mode) {
     if (!faceLandmarks) return [];
 
-    switch (currentMode) {
+    switch (mode) {
         case 'eyes': {
-            // Combined left and right eye points
             const eyeIndices = [
                 // Left eye
                 33, 246, 161, 160, 159, 158, 157, 173, 133, 155, 154, 153, 145, 144, 163, 7,
@@ -95,7 +100,8 @@ function getBoundaryPoints(faceLandmarks) {
                     x: point.x,
                     y: point.y,
                     originalX: point.x,
-                    originalY: point.y
+                    originalY: point.y,
+                    mode: 'eyes'
                 };
             });
 
@@ -110,7 +116,6 @@ function getBoundaryPoints(faceLandmarks) {
             return points;
         }
         case 'scalp': {
-            // Specific scalp boundary points
             const scalpIndices = [
                 234, // Left ear area
                 127, 162, 21, // Left side points (no offset)
@@ -121,31 +126,53 @@ function getBoundaryPoints(faceLandmarks) {
 
             // Points that need to be offset higher
             const offsetPoints = new Set([54, 103, 67, 109, 10, 338, 297, 332, 284]);
-            const SCALP_OFFSET = 0.05; // Approximately .5 inch higher
 
             return scalpIndices.map(index => {
                 const point = faceLandmarks[index];
                 if (offsetPoints.has(index)) {
-                    // Move point higher by reducing y coordinate
                     return {
                         x: point.x,
-                        y: point.y - SCALP_OFFSET
+                        y: point.y - SCALP_OFFSET,
+                        mode: 'scalp'
                     };
                 }
-                return point;
+                return {
+                    x: point.x,
+                    y: point.y,
+                    mode: 'scalp'
+                };
             });
         }
-        default: { // beard mode
-            // Original beard boundary points
+        case 'beard': {
             const lowerFaceIndices = [
                 234, // Left ear area
                 93, 132, 58, 172, 136, 150, 149, 176, 148, 152, // Left jaw line
                 377, 400, 378, 379, 365, 397, 288, 361, // Right jaw line
                 447  // Right ear area
             ];
-            return lowerFaceIndices.map(index => faceLandmarks[index]);
+            return lowerFaceIndices.map(index => ({
+                x: faceLandmarks[index].x,
+                y: faceLandmarks[index].y,
+                mode: 'beard'
+            }));
         }
+        default:
+            return [];
     }
+}
+
+// Get all active boundary points
+function getBoundaryPoints(faceLandmarks) {
+    if (!faceLandmarks || activeModes.size === 0) return [];
+    
+    // Collect points from all active modes
+    const allPoints = [];
+    activeModes.forEach(mode => {
+        const modePoints = getBoundaryPointsForMode(faceLandmarks, mode);
+        allPoints.push(...modePoints);
+    });
+    
+    return allPoints;
 }
 
 // Handle hands results
@@ -216,53 +243,64 @@ faceMesh.onResults((results) => {
             drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL,
                 {color: 'rgba(255, 255, 255, 0.4)'});
             
-            // Draw boundary line
+            // Draw boundary lines for each active mode
             if (boundaryPoints.length > 0) {
-                canvasCtx.beginPath();
-                // Use original coordinates for drawing in eye mode
-                const firstPoint = currentMode === 'eyes' ? boundaryPoints[0] : boundaryPoints[0];
-                canvasCtx.moveTo(
-                    (currentMode === 'eyes' ? firstPoint.originalX : firstPoint.x) * canvasElement.width,
-                    (currentMode === 'eyes' ? firstPoint.originalY : firstPoint.y) * canvasElement.height
-                );
-                
-                // Use quadratic curves for smoother line
-                for (let i = 1; i < boundaryPoints.length; i++) {
-                    const current = currentMode === 'eyes' ? boundaryPoints[i] : boundaryPoints[i];
-                    const prev = currentMode === 'eyes' ? boundaryPoints[i-1] : boundaryPoints[i-1];
+                // Group points by mode
+                const pointsByMode = {};
+                boundaryPoints.forEach(point => {
+                    if (!pointsByMode[point.mode]) {
+                        pointsByMode[point.mode] = [];
+                    }
+                    pointsByMode[point.mode].push(point);
+                });
+
+                // Draw each mode's boundary
+                Object.entries(pointsByMode).forEach(([mode, points]) => {
+                    canvasCtx.beginPath();
+                    const firstPoint = points[0];
+                    canvasCtx.moveTo(
+                        (mode === 'eyes' ? firstPoint.originalX : firstPoint.x) * canvasElement.width,
+                        (mode === 'eyes' ? firstPoint.originalY : firstPoint.y) * canvasElement.height
+                    );
                     
-                    const xc = ((currentMode === 'eyes' ? current.originalX : current.x) + 
-                               (currentMode === 'eyes' ? prev.originalX : prev.x)) / 2 * canvasElement.width;
-                    const yc = ((currentMode === 'eyes' ? current.originalY : current.y) + 
-                               (currentMode === 'eyes' ? prev.originalY : prev.y)) / 2 * canvasElement.height;
+                    // Use quadratic curves for smoother line
+                    for (let i = 1; i < points.length; i++) {
+                        const current = points[i];
+                        const prev = points[i-1];
+                        
+                        const xc = ((mode === 'eyes' ? current.originalX : current.x) + 
+                                  (mode === 'eyes' ? prev.originalX : prev.x)) / 2 * canvasElement.width;
+                        const yc = ((mode === 'eyes' ? current.originalY : current.y) + 
+                                  (mode === 'eyes' ? prev.originalY : prev.y)) / 2 * canvasElement.height;
+                        
+                        canvasCtx.quadraticCurveTo(
+                            (mode === 'eyes' ? prev.originalX : prev.x) * canvasElement.width,
+                            (mode === 'eyes' ? prev.originalY : prev.y) * canvasElement.height,
+                            xc,
+                            yc
+                        );
+                    }
+                    
+                    // Close the path smoothly
+                    const lastPoint = points[points.length-1];
+                    const firstPointClose = points[0];
+                    
+                    const xc = ((mode === 'eyes' ? firstPointClose.originalX : firstPointClose.x) + 
+                               (mode === 'eyes' ? lastPoint.originalX : lastPoint.x)) / 2 * canvasElement.width;
+                    const yc = ((mode === 'eyes' ? firstPointClose.originalY : firstPointClose.y) + 
+                               (mode === 'eyes' ? lastPoint.originalY : lastPoint.y)) / 2 * canvasElement.height;
                     
                     canvasCtx.quadraticCurveTo(
-                        (currentMode === 'eyes' ? prev.originalX : prev.x) * canvasElement.width,
-                        (currentMode === 'eyes' ? prev.originalY : prev.y) * canvasElement.height,
-                        xc,
-                        yc
+                        (mode === 'eyes' ? lastPoint.originalX : lastPoint.x) * canvasElement.width,
+                        (mode === 'eyes' ? lastPoint.originalY : lastPoint.y) * canvasElement.height,
+                        (mode === 'eyes' ? firstPointClose.originalX : firstPointClose.x) * canvasElement.width,
+                        (mode === 'eyes' ? firstPointClose.originalY : firstPointClose.y) * canvasElement.height
                     );
-                }
-                
-                // Close the path smoothly
-                const lastPoint = currentMode === 'eyes' ? boundaryPoints[boundaryPoints.length-1] : boundaryPoints[boundaryPoints.length-1];
-                const firstPointClose = currentMode === 'eyes' ? boundaryPoints[0] : boundaryPoints[0];
-                
-                const xc = ((currentMode === 'eyes' ? firstPointClose.originalX : firstPointClose.x) + 
-                           (currentMode === 'eyes' ? lastPoint.originalX : lastPoint.x)) / 2 * canvasElement.width;
-                const yc = ((currentMode === 'eyes' ? firstPointClose.originalY : firstPointClose.y) + 
-                           (currentMode === 'eyes' ? lastPoint.originalY : lastPoint.y)) / 2 * canvasElement.height;
-                
-                canvasCtx.quadraticCurveTo(
-                    (currentMode === 'eyes' ? lastPoint.originalX : lastPoint.x) * canvasElement.width,
-                    (currentMode === 'eyes' ? lastPoint.originalY : lastPoint.y) * canvasElement.height,
-                    (currentMode === 'eyes' ? firstPointClose.originalX : firstPointClose.x) * canvasElement.width,
-                    (currentMode === 'eyes' ? firstPointClose.originalY : firstPointClose.y) * canvasElement.height
-                );
-                
-                canvasCtx.strokeStyle = '#8e7af7';
-                canvasCtx.lineWidth = 2;
-                canvasCtx.stroke();
+                    
+                    canvasCtx.strokeStyle = '#8e7af7';
+                    canvasCtx.lineWidth = 2;
+                    canvasCtx.stroke();
+                });
             }
         }
     }
@@ -302,10 +340,10 @@ function calculateFingerFaceConfidence(handLandmarks, boundaryPoints) {
             const p2 = boundaryPoints[i + 1];
             
             // Use offset points for detection in eye mode
-            const p1x = currentMode === 'eyes' ? p1.x : p1.x;
-            const p1y = currentMode === 'eyes' ? p1.y : p1.y;
-            const p2x = currentMode === 'eyes' ? p2.x : p2.x;
-            const p2y = currentMode === 'eyes' ? p2.y : p2.y;
+            const p1x = p1.mode === 'eyes' ? p1.x : p1.x;
+            const p1y = p1.mode === 'eyes' ? p1.y : p1.y;
+            const p2x = p2.mode === 'eyes' ? p2.x : p2.x;
+            const p2y = p2.mode === 'eyes' ? p2.y : p2.y;
             
             // Calculate distance from point to line segment
             const d = pointToLineDistance(fingerTip, {x: p1x, y: p1y}, {x: p2x, y: p2y});
