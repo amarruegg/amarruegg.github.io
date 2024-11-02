@@ -3,7 +3,7 @@
 <head>
     <title>Hand and Face Tracking</title>
     <style>
-        /* Previous styles remain the same until control-panel */
+        /* Previous styles remain the same until mode-selector */
         body {
             margin: 0;
             padding: 20px;
@@ -16,7 +16,7 @@
             color: white;
         }
 
-        /* Modern mode selector */
+        /* Updated mode selector for toggle buttons */
         .mode-selector {
             width: 640px;
             margin-bottom: 16px;
@@ -257,9 +257,9 @@
     </header>
 
     <div class="mode-selector">
-        <button class="mode-button active" data-mode="beard"><span>Beard Boundary</span></button>
-        <button class="mode-button" data-mode="eyes"><span>Eye Boundary</span></button>
-        <button class="mode-button" data-mode="scalp"><span>Scalp Boundary</span></button>
+        <button class="mode-button" data-mode="beard"><span>Beard</span></button>
+        <button class="mode-button" data-mode="eyes"><span>Eyes</span></button>
+        <button class="mode-button" data-mode="scalp"><span>Scalp</span></button>
     </div>
 
     <div class="container">
