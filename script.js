@@ -4,6 +4,7 @@ const canvasCtx = canvasElement.getContext('2d');
 const textAlert = document.getElementById('text_alert');
 const nedryPopup = document.getElementById('nedry_popup');
 const nedryAudio = document.getElementById('nedry_audio');
+const alarmAudio = document.getElementById('alarm');
 const container = document.querySelector('.container');
 const confidenceLevel = document.getElementById('confidence_level');
 const confidenceText = document.getElementById('confidence_text');
@@ -459,6 +460,7 @@ function showNedryAlert() {
         nedryPopup.classList.add('fade-in');
         nedryAudio.currentTime = 0;
         nedryAudio.play();
+        alarmAudio.play();
 
         setTimeout(() => {
             nedryPopup.style.display = 'none';
