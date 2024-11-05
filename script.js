@@ -151,11 +151,18 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
                 377, 400, 378, 379, 365, 397, 288, 361, // Right jaw line
                 447  // Right ear area
             ];
-            return lowerFaceIndices.map(index => ({
-                x: faceLandmarks[index].x,
-                y: faceLandmarks[index].y,
-                mode: 'beard'
-            }));
+
+            // Set of indices that require a -0.05 offset in the y-coordinate
+            const offsetIndices = new Set([172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365]);
+
+            return lowerFaceIndices.map(index => {
+                const point = faceLandmarks[index];
+                return {
+                    x: point.x,
+                    y: point.y - (offsetIndices.has(index) ? 0.05 : 0),
+                    mode: 'beard'
+                };
+            });
         }
         default:
             return [];
