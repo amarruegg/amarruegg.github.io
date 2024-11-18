@@ -16,6 +16,40 @@
             color: white;
         }
 
+        /* Added initialization notice styles */
+        .initialization-notice {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(9, 9, 11, 0.95);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            z-index: 1000;
+            font-weight: 500;
+            font-size: 14px;
+            backdrop-filter: blur(8px);
+            border: 1px solid #27272a;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .initialization-notice .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #8e7af7;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         /* Updated mode selector for toggle buttons */
         .mode-selector {
             width: 640px;
@@ -283,6 +317,10 @@
     </div>
     <div id="nedry_popup" class="nedry-popup">
         <img src="https://media.giphy.com/media/5ftsmLIqktHQA/giphy.gif" alt="Ah ah ah!">
+    </div>
+    <div id="initialization_notice" class="initialization-notice">
+        <div class="spinner"></div>
+        <span>Initializing habit tracking...</span>
     </div>
     <audio id="nedry_audio" preload="auto">
         <source src="https://www.myinstants.com/media/sounds/ah-ah-ah-you-didnt-say-the-magic-word.mp3" type="audio/mpeg">
