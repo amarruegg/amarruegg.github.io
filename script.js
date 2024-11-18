@@ -64,7 +64,7 @@ let lastHandDetectionTime = 0;
 let isBoundaryViolation = false;
 let activeModes = new Set();
 let isInitialized = false;
-let currentSound = 'none'; // Default to no sound
+let currentSound = 'none';
 let isAlertVisible = false;
 
 const HAND_TIMEOUT = 150;
@@ -143,31 +143,28 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
             return points;
         }
         case 'scalp': {
+            // Left side points first, then right side points
             const scalpIndices = [
-                234, 127, 162, 21,
-                54, 103, 67, 109, 10, 338, 297, 332, 284,
-                251, 389, 356, 454
+                234, 127, 162, 21, 54, 103, 67, 109, 10, 338, 297, 332, 284, 251, 389, 356, 454
             ];
 
             const offsetPoints = new Set([54, 103, 67, 109, 10, 338, 297, 332, 284]);
 
-            return scalpIndices.map(index => {
+            const points = scalpIndices.map(index => {
                 const point = faceLandmarks[index];
-                if (offsetPoints.has(index)) {
-                    return {
-                        x: point.x,
-                        y: point.y - SCALP_OFFSET,
-                        mode: 'scalp'
-                    };
-                }
                 return {
                     x: point.x,
-                    y: point.y,
+                    y: point.y + (offsetPoints.has(index) ? -SCALP_OFFSET : 0),
                     mode: 'scalp'
                 };
             });
+
+            // Don't connect across the face
+            points.connectAcross = false;
+            return points;
         }
         case 'beard': {
+            // Left side points first, then right side points
             const lowerFaceIndices = [
                 234, 93, 132, 58, 172, 136, 150, 149, 176, 148, 152,
                 377, 400, 378, 379, 365, 397, 288, 361, 447
@@ -175,7 +172,7 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
 
             const offsetIndices = new Set([172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365]);
 
-            return lowerFaceIndices.map(index => {
+            const points = lowerFaceIndices.map(index => {
                 const point = faceLandmarks[index];
                 return {
                     x: point.x,
@@ -183,6 +180,10 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
                     mode: 'beard'
                 };
             });
+
+            // Don't connect across the face
+            points.connectAcross = false;
+            return points;
         }
         default:
             return [];
@@ -197,9 +198,100 @@ function getBoundaryPoints(faceLandmarks) {
     activeModes.forEach(mode => {
         const modePoints = getBoundaryPointsForMode(faceLandmarks, mode);
         allPoints.push(...modePoints);
+        // Copy the connectAcross property
+        if (modePoints.connectAcross === false) {
+            allPoints.connectAcross = false;
+        }
     });
     
     return allPoints;
+}
+
+// Draw boundary lines
+function drawBoundaryLines(ctx, points, mode) {
+    if (points.length === 0) return;
+
+    // For beard and scalp, split into left and right sides
+    if (points.connectAcross === false) {
+        const midPoint = Math.floor(points.length / 2);
+        
+        // Draw left side
+        ctx.beginPath();
+        ctx.moveTo(points[0].x * canvasElement.width, points[0].y * canvasElement.height);
+        for (let i = 1; i < midPoint; i++) {
+            const current = points[i];
+            const prev = points[i-1];
+            const xc = (current.x + prev.x) / 2 * canvasElement.width;
+            const yc = (current.y + prev.y) / 2 * canvasElement.height;
+            ctx.quadraticCurveTo(
+                prev.x * canvasElement.width,
+                prev.y * canvasElement.height,
+                xc,
+                yc
+            );
+        }
+        ctx.stroke();
+
+        // Draw right side
+        ctx.beginPath();
+        ctx.moveTo(points[midPoint].x * canvasElement.width, points[midPoint].y * canvasElement.height);
+        for (let i = midPoint + 1; i < points.length; i++) {
+            const current = points[i];
+            const prev = points[i-1];
+            const xc = (current.x + prev.x) / 2 * canvasElement.width;
+            const yc = (current.y + prev.y) / 2 * canvasElement.height;
+            ctx.quadraticCurveTo(
+                prev.x * canvasElement.width,
+                prev.y * canvasElement.height,
+                xc,
+                yc
+            );
+        }
+        ctx.stroke();
+    } else {
+        // For other modes, connect all points in a loop
+        ctx.beginPath();
+        ctx.moveTo(
+            (mode === 'eyes' ? points[0].originalX : points[0].x) * canvasElement.width,
+            (mode === 'eyes' ? points[0].originalY : points[0].y) * canvasElement.height
+        );
+        
+        for (let i = 1; i < points.length; i++) {
+            const current = points[i];
+            const prev = points[i-1];
+            
+            const xc = ((mode === 'eyes' ? current.originalX : current.x) + 
+                      (mode === 'eyes' ? prev.originalX : prev.x)) / 2 * canvasElement.width;
+            const yc = ((mode === 'eyes' ? current.originalY : current.y) + 
+                      (mode === 'eyes' ? prev.originalY : prev.y)) / 2 * canvasElement.height;
+            
+            ctx.quadraticCurveTo(
+                (mode === 'eyes' ? prev.originalX : prev.x) * canvasElement.width,
+                (mode === 'eyes' ? prev.originalY : prev.y) * canvasElement.height,
+                xc,
+                yc
+            );
+        }
+        
+        // Close the path smoothly
+        const lastPoint = points[points.length-1];
+        const firstPoint = points[0];
+        
+        const xc = ((mode === 'eyes' ? firstPoint.originalX : firstPoint.x) + 
+                   (mode === 'eyes' ? lastPoint.originalX : lastPoint.x)) / 2 * canvasElement.width;
+        const yc = ((mode === 'eyes' ? firstPoint.originalY : firstPoint.y) + 
+                   (mode === 'eyes' ? lastPoint.originalY : lastPoint.y)) / 2 * canvasElement.height;
+        
+        ctx.quadraticCurveTo(
+            (mode === 'eyes' ? lastPoint.originalX : lastPoint.x) * canvasElement.width,
+            (mode === 'eyes' ? lastPoint.originalY : lastPoint.y) * canvasElement.height,
+            xc,
+            yc
+        );
+        
+        ctx.closePath();
+        ctx.stroke();
+    }
 }
 
 // Handle hands results
@@ -264,51 +356,17 @@ faceMesh.onResults((results) => {
                     pointsByMode[point.mode] = [];
                 }
                 pointsByMode[point.mode].push(point);
+                // Copy the connectAcross property
+                if (boundaryPoints.connectAcross === false) {
+                    pointsByMode[point.mode].connectAcross = false;
+                }
             });
 
+            // Draw boundaries for each mode
             Object.entries(pointsByMode).forEach(([mode, points]) => {
-                canvasCtx.beginPath();
-                const firstPoint = points[0];
-                canvasCtx.moveTo(
-                    (mode === 'eyes' ? firstPoint.originalX : firstPoint.x) * canvasElement.width,
-                    (mode === 'eyes' ? firstPoint.originalY : firstPoint.y) * canvasElement.height
-                );
-                
-                for (let i = 1; i < points.length; i++) {
-                    const current = points[i];
-                    const prev = points[i-1];
-                    
-                    const xc = ((mode === 'eyes' ? current.originalX : current.x) + 
-                              (mode === 'eyes' ? prev.originalX : prev.x)) / 2 * canvasElement.width;
-                    const yc = ((mode === 'eyes' ? current.originalY : current.y) + 
-                              (mode === 'eyes' ? prev.originalY : prev.y)) / 2 * canvasElement.height;
-                    
-                    canvasCtx.quadraticCurveTo(
-                        (mode === 'eyes' ? prev.originalX : prev.x) * canvasElement.width,
-                        (mode === 'eyes' ? prev.originalY : prev.y) * canvasElement.height,
-                        xc,
-                        yc
-                    );
-                }
-                
-                const lastPoint = points[points.length-1];
-                const firstPointClose = points[0];
-                
-                const xc = ((mode === 'eyes' ? firstPointClose.originalX : firstPointClose.x) + 
-                           (mode === 'eyes' ? lastPoint.originalX : lastPoint.x)) / 2 * canvasElement.width;
-                const yc = ((mode === 'eyes' ? firstPointClose.originalY : firstPointClose.y) + 
-                           (mode === 'eyes' ? lastPoint.originalY : lastPoint.y)) / 2 * canvasElement.height;
-                
-                canvasCtx.quadraticCurveTo(
-                    (mode === 'eyes' ? lastPoint.originalX : lastPoint.x) * canvasElement.width,
-                    (mode === 'eyes' ? lastPoint.originalY : lastPoint.y) * canvasElement.height,
-                    xc,
-                    yc
-                );
-                
                 canvasCtx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
                 canvasCtx.lineWidth = 2;
-                canvasCtx.stroke();
+                drawBoundaryLines(canvasCtx, points, mode);
             });
         }
     }
@@ -440,10 +498,10 @@ function hideAlert() {
         isAlertVisible = false;
         textAlert.classList.remove('visible');
         setTimeout(() => {
-            if (!isAlertVisible) { // Check again in case alert was shown again
+            if (!isAlertVisible) {
                 textAlert.style.display = 'none';
             }
-        }, 200); // Match the CSS transition duration
+        }, 200);
     }
 }
 
