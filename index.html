@@ -16,7 +16,72 @@
             color: white;
         }
 
-        /* Added initialization notice styles */
+        /* Sound selector styles */
+        .sound-selector {
+            width: 640px;
+            margin-bottom: 16px;
+            background: #101014;
+            border-radius: 12px;
+            padding: 16px;
+            box-sizing: border-box;
+            display: flex;
+            gap: 12px;
+            border: 1px solid #27272a;
+        }
+
+        .sound-button {
+            flex: 1;
+            background: rgba(142, 122, 247, 0.1);
+            color: #a1a1aa;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sound-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, #8e7af7, #818cf8);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .sound-button span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .sound-button:hover {
+            color: white;
+        }
+
+        .sound-button:hover::before {
+            opacity: 0.1;
+        }
+
+        .sound-button.active {
+            background: #8e7af7;
+            color: white;
+        }
+
+        .sound-button.active::before {
+            opacity: 1;
+        }
+
+        /* Previous styles */
         .initialization-notice {
             position: fixed;
             top: 50%;
@@ -297,6 +362,12 @@
         <button class="mode-button" data-mode="mouth"><span>Mouth</span></button>
     </div>
 
+    <div class="sound-selector">
+        <button class="sound-button active" data-sound="none"><span>No Sound</span></button>
+        <button class="sound-button" data-sound="alarm"><span>Alarm</span></button>
+        <button class="sound-button" data-sound="nedry"><span>Nedry</span></button>
+    </div>
+
     <div class="container">
         <video id="input_video"></video>
         <canvas id="output_canvas"></canvas>
@@ -316,7 +387,7 @@
         You're too beautiful to be doing this to yourself!
     </div>
     <div id="nedry_popup" class="nedry-popup">
-        <img src="https://media.giphy.com/media/5ftsmLIqktHQA/giphy.gif" alt="Ah ah ah!">
+        <img src="https://media.tenor.com/x8v1oNUOmg4AAAAd/jurassic-park-ah-ah-ah.gif" alt="Ah ah ah!">
     </div>
     <div id="initialization_notice" class="initialization-notice">
         <div class="spinner"></div>
