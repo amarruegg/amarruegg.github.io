@@ -66,6 +66,7 @@ const HAND_TIMEOUT = 150;
 const CONFIDENCE_THRESHOLD = 0.8;
 const EYE_BOUNDARY_OFFSET = 0.025; // About a quarter inch at typical webcam distance
 const SCALP_OFFSET = 0.1; // Approximately 1 inch higher
+const MOUTH_OFFSET = 0.02; // Small offset for mouth boundary
 
 // Mode selector handler
 modeButtons.forEach(button => {
@@ -87,6 +88,21 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
     if (!faceLandmarks) return [];
 
     switch (mode) {
+        case 'mouth': {
+            const mouthIndices = [
+                61, 185, 40, 39, 37, 0, 267, 269, 270, 409,
+                291, 375, 321, 405, 314, 17, 84, 181, 91, 146
+            ];
+
+            return mouthIndices.map(index => {
+                const point = faceLandmarks[index];
+                return {
+                    x: point.x,
+                    y: point.y + MOUTH_OFFSET,
+                    mode: 'mouth'
+                };
+            });
+        }
         case 'eyes': {
             const eyeIndices = [
                 // Left eye
@@ -301,11 +317,12 @@ faceMesh.onResults((results) => {
                     canvasCtx.quadraticCurveTo(
                         (mode === 'eyes' ? lastPoint.originalX : lastPoint.x) * canvasElement.width,
                         (mode === 'eyes' ? lastPoint.originalY : lastPoint.y) * canvasElement.height,
-                        (mode === 'eyes' ? firstPointClose.originalX : firstPointClose.x) * canvasElement.width,
-                        (mode === 'eyes' ? firstPointClose.originalY : firstPointClose.y) * canvasElement.height
+                        xc,
+                        yc
                     );
                     
-                    canvasCtx.strokeStyle = '#8e7af7';
+                    // Update boundary color to semi-transparent red
+                    canvasCtx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
                     canvasCtx.lineWidth = 2;
                     canvasCtx.stroke();
                 });
