@@ -11,6 +11,7 @@ const confidenceText = document.getElementById('confidence_text');
 const countdownContainer = document.getElementById('countdown_container');
 const countdownNumber = document.getElementById('countdown_number');
 const modeButtons = document.querySelectorAll('.mode-button');
+const initializationNotice = document.getElementById('initialization_notice');
 
 // Set initial dimensions
 function updateDimensions() {
@@ -61,6 +62,7 @@ let timeRemaining = 3;
 let lastHandDetectionTime = 0;
 let isBoundaryViolation = false;
 let activeModes = new Set(); // Replace currentMode with Set of active modes
+let isInitialized = false;
 
 const HAND_TIMEOUT = 150;
 const CONFIDENCE_THRESHOLD = 0.8;
@@ -248,6 +250,12 @@ hands.onResults((results) => {
 
 // Handle face mesh results
 faceMesh.onResults((results) => {
+    // Hide initialization notice once we start getting results
+    if (!isInitialized && results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+        isInitialized = true;
+        initializationNotice.style.display = 'none';
+    }
+
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
@@ -256,77 +264,65 @@ faceMesh.onResults((results) => {
         faceLandmarks = results.multiFaceLandmarks[0];
         boundaryPoints = getBoundaryPoints(faceLandmarks);
         
-        // Draw face mesh
-        for (const landmarks of results.multiFaceLandmarks) {
-            drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION,
-                {color: 'rgba(255, 255, 255, 0.2)', lineWidth: 1});
-            drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE,
-                {color: 'rgba(255, 255, 255, 0.4)'});
-            drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE,
-                {color: 'rgba(255, 255, 255, 0.4)'});
-            drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL,
-                {color: 'rgba(255, 255, 255, 0.4)'});
-            
-            // Draw boundary lines for each active mode
-            if (boundaryPoints.length > 0) {
-                // Group points by mode
-                const pointsByMode = {};
-                boundaryPoints.forEach(point => {
-                    if (!pointsByMode[point.mode]) {
-                        pointsByMode[point.mode] = [];
-                    }
-                    pointsByMode[point.mode].push(point);
-                });
+        // Draw boundary lines for each active mode
+        if (boundaryPoints.length > 0) {
+            // Group points by mode
+            const pointsByMode = {};
+            boundaryPoints.forEach(point => {
+                if (!pointsByMode[point.mode]) {
+                    pointsByMode[point.mode] = [];
+                }
+                pointsByMode[point.mode].push(point);
+            });
 
-                // Draw each mode's boundary
-                Object.entries(pointsByMode).forEach(([mode, points]) => {
-                    canvasCtx.beginPath();
-                    const firstPoint = points[0];
-                    canvasCtx.moveTo(
-                        (mode === 'eyes' ? firstPoint.originalX : firstPoint.x) * canvasElement.width,
-                        (mode === 'eyes' ? firstPoint.originalY : firstPoint.y) * canvasElement.height
-                    );
+            // Draw each mode's boundary
+            Object.entries(pointsByMode).forEach(([mode, points]) => {
+                canvasCtx.beginPath();
+                const firstPoint = points[0];
+                canvasCtx.moveTo(
+                    (mode === 'eyes' ? firstPoint.originalX : firstPoint.x) * canvasElement.width,
+                    (mode === 'eyes' ? firstPoint.originalY : firstPoint.y) * canvasElement.height
+                );
+                
+                // Use quadratic curves for smoother line
+                for (let i = 1; i < points.length; i++) {
+                    const current = points[i];
+                    const prev = points[i-1];
                     
-                    // Use quadratic curves for smoother line
-                    for (let i = 1; i < points.length; i++) {
-                        const current = points[i];
-                        const prev = points[i-1];
-                        
-                        const xc = ((mode === 'eyes' ? current.originalX : current.x) + 
-                                  (mode === 'eyes' ? prev.originalX : prev.x)) / 2 * canvasElement.width;
-                        const yc = ((mode === 'eyes' ? current.originalY : current.y) + 
-                                  (mode === 'eyes' ? prev.originalY : prev.y)) / 2 * canvasElement.height;
-                        
-                        canvasCtx.quadraticCurveTo(
-                            (mode === 'eyes' ? prev.originalX : prev.x) * canvasElement.width,
-                            (mode === 'eyes' ? prev.originalY : prev.y) * canvasElement.height,
-                            xc,
-                            yc
-                        );
-                    }
-                    
-                    // Close the path smoothly
-                    const lastPoint = points[points.length-1];
-                    const firstPointClose = points[0];
-                    
-                    const xc = ((mode === 'eyes' ? firstPointClose.originalX : firstPointClose.x) + 
-                               (mode === 'eyes' ? lastPoint.originalX : lastPoint.x)) / 2 * canvasElement.width;
-                    const yc = ((mode === 'eyes' ? firstPointClose.originalY : firstPointClose.y) + 
-                               (mode === 'eyes' ? lastPoint.originalY : lastPoint.y)) / 2 * canvasElement.height;
+                    const xc = ((mode === 'eyes' ? current.originalX : current.x) + 
+                              (mode === 'eyes' ? prev.originalX : prev.x)) / 2 * canvasElement.width;
+                    const yc = ((mode === 'eyes' ? current.originalY : current.y) + 
+                              (mode === 'eyes' ? prev.originalY : prev.y)) / 2 * canvasElement.height;
                     
                     canvasCtx.quadraticCurveTo(
-                        (mode === 'eyes' ? lastPoint.originalX : lastPoint.x) * canvasElement.width,
-                        (mode === 'eyes' ? lastPoint.originalY : lastPoint.y) * canvasElement.height,
+                        (mode === 'eyes' ? prev.originalX : prev.x) * canvasElement.width,
+                        (mode === 'eyes' ? prev.originalY : prev.y) * canvasElement.height,
                         xc,
                         yc
                     );
-                    
-                    // Update boundary color to semi-transparent red
-                    canvasCtx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-                    canvasCtx.lineWidth = 2;
-                    canvasCtx.stroke();
-                });
-            }
+                }
+                
+                // Close the path smoothly
+                const lastPoint = points[points.length-1];
+                const firstPointClose = points[0];
+                
+                const xc = ((mode === 'eyes' ? firstPointClose.originalX : firstPointClose.x) + 
+                           (mode === 'eyes' ? lastPoint.originalX : lastPoint.x)) / 2 * canvasElement.width;
+                const yc = ((mode === 'eyes' ? firstPointClose.originalY : firstPointClose.y) + 
+                           (mode === 'eyes' ? lastPoint.originalY : lastPoint.y)) / 2 * canvasElement.height;
+                
+                canvasCtx.quadraticCurveTo(
+                    (mode === 'eyes' ? lastPoint.originalX : lastPoint.x) * canvasElement.width,
+                    (mode === 'eyes' ? lastPoint.originalY : lastPoint.y) * canvasElement.height,
+                    xc,
+                    yc
+                );
+                
+                // Update boundary color to semi-transparent red
+                canvasCtx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+                canvasCtx.lineWidth = 2;
+                canvasCtx.stroke();
+            });
         }
     }
 
