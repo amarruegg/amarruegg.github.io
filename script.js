@@ -65,6 +65,7 @@ let isBoundaryViolation = false;
 let activeModes = new Set();
 let isInitialized = false;
 let currentSound = 'none'; // Default to no sound
+let isAlertVisible = false;
 
 const HAND_TIMEOUT = 150;
 const CONFIDENCE_THRESHOLD = 0.8;
@@ -89,9 +90,7 @@ modeButtons.forEach(button => {
 soundButtons.forEach(button => {
     button.addEventListener('click', () => {
         const sound = button.dataset.sound;
-        // Remove active class from all buttons
         soundButtons.forEach(btn => btn.classList.remove('active'));
-        // Add active class to clicked button
         button.classList.add('active');
         currentSound = sound;
     });
@@ -237,7 +236,7 @@ hands.onResults((results) => {
     } else {
         if (isBoundaryViolation) {
             isBoundaryViolation = false;
-            hideTextAlert();
+            hideAlert();
             resetBoundaryTimer();
         }
     }
@@ -400,39 +399,51 @@ function updateConfidenceMeter(confidence) {
 }
 
 function showAlert() {
-    const now = Date.now();
-    
-    if (now - lastAlertTime > 1000) {
+    if (!isAlertVisible) {
+        isAlertVisible = true;
         textAlert.style.display = 'block';
-        textAlert.classList.add('fade-in');
-        lastAlertTime = now;
-    }
-
-    if (!boundaryTimer && !isNedryShowing) {
-        timeRemaining = 3;
-        updateCountdown();
+        // Force a reflow to ensure the transition works
+        textAlert.offsetHeight;
+        textAlert.classList.add('visible');
         showCountdown();
         
-        boundaryTimer = setTimeout(() => {
-            if (currentSound === 'nedry') {
-                showNedryAlert();
-            } else if (currentSound === 'alarm') {
-                playAlarmSound();
-            }
-            // Send signal to Tasmota
-            fetch('http://localhost:3001/tasmota/cm?cmnd=POWER1%20TOGGLE')
-                .catch(err => console.log('Proxy communication error:', err));
-        }, 3000);
-
-        if (countdownInterval) clearInterval(countdownInterval);
-        countdownInterval = setInterval(() => {
-            timeRemaining--;
+        if (!boundaryTimer && !isNedryShowing) {
+            timeRemaining = 3;
             updateCountdown();
-            if (timeRemaining <= 0) {
-                clearInterval(countdownInterval);
-                hideCountdown();
+            
+            boundaryTimer = setTimeout(() => {
+                if (currentSound === 'nedry') {
+                    showNedryAlert();
+                } else if (currentSound === 'alarm') {
+                    playAlarmSound();
+                }
+                // Send signal to Tasmota
+                fetch('http://localhost:3001/tasmota/cm?cmnd=POWER1%20TOGGLE')
+                    .catch(err => console.log('Proxy communication error:', err));
+            }, 3000);
+
+            if (countdownInterval) clearInterval(countdownInterval);
+            countdownInterval = setInterval(() => {
+                timeRemaining--;
+                updateCountdown();
+                if (timeRemaining <= 0) {
+                    clearInterval(countdownInterval);
+                    hideCountdown();
+                }
+            }, 1000);
+        }
+    }
+}
+
+function hideAlert() {
+    if (isAlertVisible) {
+        isAlertVisible = false;
+        textAlert.classList.remove('visible');
+        setTimeout(() => {
+            if (!isAlertVisible) { // Check again in case alert was shown again
+                textAlert.style.display = 'none';
             }
-        }, 1000);
+        }, 200); // Match the CSS transition duration
     }
 }
 
@@ -480,13 +491,6 @@ function resetBoundaryTimer() {
         countdownInterval = null;
     }
     hideCountdown();
-}
-
-function hideTextAlert() {
-    if (textAlert.style.display === 'block') {
-        textAlert.style.display = 'none';
-        textAlert.classList.remove('fade-in');
-    }
 }
 
 const camera = new Camera(videoElement, {
