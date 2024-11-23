@@ -104,7 +104,7 @@
             opacity: 1;
         }
 
-        /* Previous styles */
+        /* Rest of the existing styles remain unchanged */
         .initialization-notice {
             position: fixed;
             top: 50%;
@@ -138,7 +138,7 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Updated mode selector for toggle buttons */
+        /* Mode selector styles */
         .mode-selector {
             width: 640px;
             margin-bottom: 16px;
@@ -431,6 +431,12 @@
                 <span>ah-ah-ah</span>
             </div>
         </button>
+        <button class="sound-button" data-sound="random">
+            <div class="button-content">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238e7af7'%3E%3Cpath d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z'/%3E%3C/svg%3E" alt="" class="button-icon">
+                <span>Affirmations</span>
+            </div>
+        </button>
     </div>
 
     <div class="container">
@@ -464,6 +470,7 @@
     <audio id="alarm" preload="auto">
         <source src="alarm.mp3" type="audio/mpeg">
     </audio>
+    <div id="random_audio_container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
