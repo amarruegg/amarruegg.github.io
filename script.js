@@ -110,6 +110,22 @@ const CONFIDENCE_THRESHOLD = 0.8;
 const EYE_BOUNDARY_OFFSET = 0.025;
 const SCALP_OFFSET = 0.1;
 
+// Function to calculate boundary color based on confidence
+function getBoundaryColor(confidence) {
+    // Start with light green at 50% opacity
+    const baseColor = { r: 0, g: 255, b: 0, a: 0.5 };
+    // Target color is bright red
+    const targetColor = { r: 255, g: 0, b: 0, a: 0.7 };
+    
+    // Interpolate between the colors based on confidence
+    const r = baseColor.r + (targetColor.r - baseColor.r) * confidence;
+    const g = baseColor.g + (targetColor.g - baseColor.g) * confidence;
+    const b = baseColor.b + (targetColor.b - baseColor.b) * confidence;
+    const a = baseColor.a + (targetColor.a - baseColor.a) * confidence;
+    
+    return `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, ${a})`;
+}
+
 // Mode selector handler
 modeButtons.forEach(button => {
     button.addEventListener('click', () => {
@@ -134,21 +150,15 @@ soundButtons.forEach(button => {
     });
 });
 
-// Function to play random audio
+// Function to play random affirmation audio
 function playRandomAudio() {
-    // Stop any currently playing random audio
-    if (currentRandomAudio) {
-        currentRandomAudio.pause();
-        currentRandomAudio.currentTime = 0;
+    // Only start new audio if none is currently playing
+    if (!currentRandomAudio || currentRandomAudio.ended) {
+        const randomIndex = Math.floor(Math.random() * audioFiles.length);
+        const audioFile = audioFiles[randomIndex];
+        currentRandomAudio = new Audio(audioFile);
+        currentRandomAudio.play();
     }
-
-    // Select a random audio file
-    const randomIndex = Math.floor(Math.random() * audioFiles.length);
-    const audioFile = audioFiles[randomIndex];
-
-    // Create new audio element
-    currentRandomAudio = new Audio(audioFile);
-    currentRandomAudio.play();
 }
 
 // Get boundary points for a specific mode
@@ -266,8 +276,8 @@ function getBoundaryPoints(faceLandmarks) {
     return allPoints;
 }
 
-// Draw boundary lines
-function drawBoundaryLines(ctx, points, mode) {
+// Draw boundary areas with color based on confidence
+function drawBoundaryLines(ctx, points, mode, confidence = 0) {
     if (points.length === 0) return;
 
     // For beard and scalp, split into left and right sides
@@ -289,7 +299,12 @@ function drawBoundaryLines(ctx, points, mode) {
                 yc
             );
         }
-        ctx.stroke();
+        // Close the path by connecting to the edge of the screen
+        ctx.lineTo(0, canvasElement.height);
+        ctx.lineTo(0, 0);
+        ctx.closePath();
+        ctx.fillStyle = getBoundaryColor(confidence);
+        ctx.fill();
 
         // Draw right side
         ctx.beginPath();
@@ -306,9 +321,14 @@ function drawBoundaryLines(ctx, points, mode) {
                 yc
             );
         }
-        ctx.stroke();
+        // Close the path by connecting to the edge of the screen
+        ctx.lineTo(canvasElement.width, canvasElement.height);
+        ctx.lineTo(canvasElement.width, 0);
+        ctx.closePath();
+        ctx.fillStyle = getBoundaryColor(confidence);
+        ctx.fill();
     } else {
-        // For other modes, connect all points in a loop
+        // For other modes, create a filled area
         ctx.beginPath();
         ctx.moveTo(
             (mode === 'eyes' ? points[0].originalX : points[0].x) * canvasElement.width,
@@ -349,7 +369,8 @@ function drawBoundaryLines(ctx, points, mode) {
         );
         
         ctx.closePath();
-        ctx.stroke();
+        ctx.fillStyle = getBoundaryColor(confidence);
+        ctx.fill();
     }
 }
 
@@ -420,10 +441,17 @@ faceMesh.onResults((results) => {
                 }
             });
 
+            // Calculate current confidence for coloring
+            let currentConfidence = 0;
+            if (handResults && handResults.multiHandLandmarks && handResults.multiHandLandmarks.length > 0) {
+                for (const landmarks of handResults.multiHandLandmarks) {
+                    const confidence = calculateFingerFaceConfidence(landmarks, boundaryPoints);
+                    currentConfidence = Math.max(currentConfidence, confidence);
+                }
+            }
+
             Object.entries(pointsByMode).forEach(([mode, points]) => {
-                canvasCtx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-                canvasCtx.lineWidth = 2;
-                drawBoundaryLines(canvasCtx, points, mode);
+                drawBoundaryLines(canvasCtx, points, mode, currentConfidence);
             });
         }
     }
@@ -517,7 +545,6 @@ function showAlert() {
     if (!isAlertVisible) {
         isAlertVisible = true;
         textAlert.style.display = 'block';
-        // Force a reflow to ensure the transition works
         textAlert.offsetHeight;
         textAlert.classList.add('visible');
         showCountdown();
@@ -534,7 +561,6 @@ function showAlert() {
                 } else if (currentSound === 'random') {
                     playRandomAudio();
                 }
-                // Send signal to Tasmota
                 fetch('http://localhost:3001/tasmota/cm?cmnd=POWER1%20TOGGLE')
                     .catch(err => console.log('Proxy communication error:', err));
             }, 3000);
@@ -606,10 +632,6 @@ function resetBoundaryTimer() {
     if (countdownInterval) {
         clearInterval(countdownInterval);
         countdownInterval = null;
-    }
-    if (currentRandomAudio) {
-        currentRandomAudio.pause();
-        currentRandomAudio.currentTime = 0;
     }
     hideCountdown();
 }
