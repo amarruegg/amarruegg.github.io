@@ -14,6 +14,44 @@ const modeButtons = document.querySelectorAll('.mode-button');
 const soundButtons = document.querySelectorAll('.sound-button');
 const initializationNotice = document.getElementById('initialization_notice');
 
+// Audio files array
+const audioFiles = [
+    'audio/capable_of_more_imagine.mp3',
+    'audio/cmon_youve_got_this.mp3',
+    'audio/dont_beat_yourself_up_get_there_in_time.mp3',
+    'audio/each_moment_opportunity_to_grow.mp3',
+    'audio/give_another_shot_you_got_it.mp3',
+    'audio/growth_within_reach.mp3',
+    'audio/hands_up_be_aware_triggers.mp3',
+    'audio/i_am_aware_and_in_control.mp3',
+    'audio/i_am_resiliant_capable_of_change.mp3',
+    'audio/i_choose_treat_myself_care.mp3',
+    'audio/i_will_not_let_urge_define_me.mp3',
+    'audio/its_okay_pause_refocus.mp3',
+    'audio/keep_going_doing_great.mp3',
+    'audio/only_you_are_in_control_actions.mp3',
+    'audio/pause_take_deep_breath.mp3',
+    'audio/remember_how_this_made_you_feel.mp3',
+    'audio/remember_someone_thinks_youre_cute.mp3',
+    'audio/stay_present_redirect_hands.mp3',
+    'audio/strong_mindful_control.mp3',
+    'audio/take_moment_notice_hands.mp3',
+    'audio/the_power_in_your_hands.mp3',
+    'audio/this_is_your_moment_to_take_control.mp3',
+    'audio/you_are_beautiful_take_moment.mp3',
+    'audio/you_are_more_than_capable_of_beating.mp3',
+    'audio/you_got_this_stay_mindful.mp3',
+    'audio/you_got_this.mp3',
+    'audio/you_have_power_to_stop.mp3',
+    'audio/youre_crossing_boundary_refocus.mp3',
+    'audio/youre_making_progress_promise.mp3',
+    'audio/youre_one_step_closer_beating.mp3',
+    'audio/youre_stronger_than_urge.mp3',
+    'audio/youve_taken_first_step_dont_get_discouraged.mp3'
+];
+
+let currentRandomAudio = null;
+
 // Set initial dimensions
 function updateDimensions() {
     canvasElement.width = container.offsetWidth;
@@ -96,6 +134,23 @@ soundButtons.forEach(button => {
     });
 });
 
+// Function to play random audio
+function playRandomAudio() {
+    // Stop any currently playing random audio
+    if (currentRandomAudio) {
+        currentRandomAudio.pause();
+        currentRandomAudio.currentTime = 0;
+    }
+
+    // Select a random audio file
+    const randomIndex = Math.floor(Math.random() * audioFiles.length);
+    const audioFile = audioFiles[randomIndex];
+
+    // Create new audio element
+    currentRandomAudio = new Audio(audioFile);
+    currentRandomAudio.play();
+}
+
 // Get boundary points for a specific mode
 function getBoundaryPointsForMode(faceLandmarks, mode) {
     if (!faceLandmarks) return [];
@@ -143,28 +198,34 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
             return points;
         }
         case 'scalp': {
-            // Left side points first, then right side points
             const scalpIndices = [
-                234, 127, 162, 21, 54, 103, 67, 109, 10, 338, 297, 332, 284, 251, 389, 356, 454
+                234, 127, 162, 21,
+                54, 103, 67, 109, 10, 338, 297, 332, 284,
+                251, 389, 356, 454
             ];
 
             const offsetPoints = new Set([54, 103, 67, 109, 10, 338, 297, 332, 284]);
 
             const points = scalpIndices.map(index => {
                 const point = faceLandmarks[index];
+                if (offsetPoints.has(index)) {
+                    return {
+                        x: point.x,
+                        y: point.y - SCALP_OFFSET,
+                        mode: 'scalp'
+                    };
+                }
                 return {
                     x: point.x,
-                    y: point.y + (offsetPoints.has(index) ? -SCALP_OFFSET : 0),
+                    y: point.y,
                     mode: 'scalp'
                 };
             });
 
-            // Don't connect across the face
             points.connectAcross = false;
             return points;
         }
         case 'beard': {
-            // Left side points first, then right side points
             const lowerFaceIndices = [
                 234, 93, 132, 58, 172, 136, 150, 149, 176, 148, 152,
                 377, 400, 378, 379, 365, 397, 288, 361, 447
@@ -181,7 +242,6 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
                 };
             });
 
-            // Don't connect across the face
             points.connectAcross = false;
             return points;
         }
@@ -198,7 +258,6 @@ function getBoundaryPoints(faceLandmarks) {
     activeModes.forEach(mode => {
         const modePoints = getBoundaryPointsForMode(faceLandmarks, mode);
         allPoints.push(...modePoints);
-        // Copy the connectAcross property
         if (modePoints.connectAcross === false) {
             allPoints.connectAcross = false;
         }
@@ -356,13 +415,11 @@ faceMesh.onResults((results) => {
                     pointsByMode[point.mode] = [];
                 }
                 pointsByMode[point.mode].push(point);
-                // Copy the connectAcross property
                 if (boundaryPoints.connectAcross === false) {
                     pointsByMode[point.mode].connectAcross = false;
                 }
             });
 
-            // Draw boundaries for each mode
             Object.entries(pointsByMode).forEach(([mode, points]) => {
                 canvasCtx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
                 canvasCtx.lineWidth = 2;
@@ -474,6 +531,8 @@ function showAlert() {
                     showNedryAlert();
                 } else if (currentSound === 'alarm') {
                     playAlarmSound();
+                } else if (currentSound === 'random') {
+                    playRandomAudio();
                 }
                 // Send signal to Tasmota
                 fetch('http://localhost:3001/tasmota/cm?cmnd=POWER1%20TOGGLE')
@@ -547,6 +606,10 @@ function resetBoundaryTimer() {
     if (countdownInterval) {
         clearInterval(countdownInterval);
         countdownInterval = null;
+    }
+    if (currentRandomAudio) {
+        currentRandomAudio.pause();
+        currentRandomAudio.currentTime = 0;
     }
     hideCountdown();
 }
