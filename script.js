@@ -287,6 +287,8 @@ function drawBoundaryLines(ctx, points, mode, confidence = 0) {
         // Draw left side
         ctx.beginPath();
         ctx.moveTo(points[0].x * canvasElement.width, points[0].y * canvasElement.height);
+        
+        // Draw first half of the boundary
         for (let i = 1; i < midPoint; i++) {
             const current = points[i];
             const prev = points[i-1];
@@ -299,16 +301,16 @@ function drawBoundaryLines(ctx, points, mode, confidence = 0) {
                 yc
             );
         }
-        // Close the path by connecting to the edge of the screen
-        ctx.lineTo(0, canvasElement.height);
-        ctx.lineTo(0, 0);
+        ctx.lineTo(points[midPoint-1].x * canvasElement.width, 
+                  points[midPoint-1].y * canvasElement.height);
         ctx.closePath();
         ctx.fillStyle = getBoundaryColor(confidence);
         ctx.fill();
 
         // Draw right side
         ctx.beginPath();
-        ctx.moveTo(points[midPoint].x * canvasElement.width, points[midPoint].y * canvasElement.height);
+        ctx.moveTo(points[midPoint].x * canvasElement.width, 
+                  points[midPoint].y * canvasElement.height);
         for (let i = midPoint + 1; i < points.length; i++) {
             const current = points[i];
             const prev = points[i-1];
@@ -321,14 +323,13 @@ function drawBoundaryLines(ctx, points, mode, confidence = 0) {
                 yc
             );
         }
-        // Close the path by connecting to the edge of the screen
-        ctx.lineTo(canvasElement.width, canvasElement.height);
-        ctx.lineTo(canvasElement.width, 0);
+        ctx.lineTo(points[points.length-1].x * canvasElement.width, 
+                  points[points.length-1].y * canvasElement.height);
         ctx.closePath();
         ctx.fillStyle = getBoundaryColor(confidence);
         ctx.fill();
     } else {
-        // For other modes, create a filled area
+        // For eyes and mouth, create a filled area
         ctx.beginPath();
         ctx.moveTo(
             (mode === 'eyes' ? points[0].originalX : points[0].x) * canvasElement.width,
@@ -651,3 +652,5 @@ window.addEventListener('resize', updateDimensions);
 camera.start();
 hands.initialize();
 faceMesh.initialize();
+
+
