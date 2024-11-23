@@ -208,51 +208,39 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
             return points;
         }
         case 'scalp': {
+            // Updated scalp indices for better coverage
             const scalpIndices = [
-                234, 127, 162, 21,
-                54, 103, 67, 109, 10, 338, 297, 332, 284,
-                251, 389, 356, 454
+                10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109
             ];
-
-            const offsetPoints = new Set([54, 103, 67, 109, 10, 338, 297, 332, 284]);
 
             const points = scalpIndices.map(index => {
                 const point = faceLandmarks[index];
-                if (offsetPoints.has(index)) {
-                    return {
-                        x: point.x,
-                        y: point.y - SCALP_OFFSET,
-                        mode: 'scalp'
-                    };
-                }
+                const yOffset = point.y < 0.4 ? -SCALP_OFFSET : 0; // Only offset points above threshold
                 return {
                     x: point.x,
-                    y: point.y,
+                    y: point.y + yOffset,
                     mode: 'scalp'
                 };
             });
 
-            points.connectAcross = false;
             return points;
         }
         case 'beard': {
-            const lowerFaceIndices = [
-                234, 93, 132, 58, 172, 136, 150, 149, 176, 148, 152,
-                377, 400, 378, 379, 365, 397, 288, 361, 447
+            // Updated beard indices for better coverage
+            const beardIndices = [
+                132, 58, 172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397, 288, 361, 323, 454, 356, 389, 251, 284, 332, 297, 338, 10, 109, 67, 103, 54, 21, 162, 127, 234, 93
             ];
 
-            const offsetIndices = new Set([172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365]);
-
-            const points = lowerFaceIndices.map(index => {
+            const points = beardIndices.map(index => {
                 const point = faceLandmarks[index];
+                const yOffset = point.y > 0.6 ? 0.05 : 0; // Only offset points below threshold
                 return {
                     x: point.x,
-                    y: point.y + (offsetIndices.has(index) ? 0.05 : 0),
+                    y: point.y + yOffset,
                     mode: 'beard'
                 };
             });
 
-            points.connectAcross = false;
             return points;
         }
         default:
@@ -268,9 +256,6 @@ function getBoundaryPoints(faceLandmarks) {
     activeModes.forEach(mode => {
         const modePoints = getBoundaryPointsForMode(faceLandmarks, mode);
         allPoints.push(...modePoints);
-        if (modePoints.connectAcross === false) {
-            allPoints.connectAcross = false;
-        }
     });
     
     return allPoints;
@@ -280,101 +265,42 @@ function getBoundaryPoints(faceLandmarks) {
 function drawBoundaryLines(ctx, points, mode, confidence = 0) {
     if (points.length === 0) return;
 
-    // For beard and scalp, split into left and right sides
-    if (points.connectAcross === false) {
-        const midPoint = Math.floor(points.length / 2);
-        
-        // Draw left side
-        ctx.beginPath();
-        ctx.moveTo(points[0].x * canvasElement.width, points[0].y * canvasElement.height);
-        
-        // Draw first half of the boundary
-        for (let i = 1; i < midPoint; i++) {
-            const current = points[i];
-            const prev = points[i-1];
-            const xc = (current.x + prev.x) / 2 * canvasElement.width;
-            const yc = (current.y + prev.y) / 2 * canvasElement.height;
-            ctx.quadraticCurveTo(
-                prev.x * canvasElement.width,
-                prev.y * canvasElement.height,
-                xc,
-                yc
-            );
-        }
-        ctx.lineTo(points[midPoint-1].x * canvasElement.width, 
-                  points[midPoint-1].y * canvasElement.height);
-        ctx.closePath();
-        ctx.fillStyle = getBoundaryColor(confidence);
-        ctx.fill();
-
-        // Draw right side
-        ctx.beginPath();
-        ctx.moveTo(points[midPoint].x * canvasElement.width, 
-                  points[midPoint].y * canvasElement.height);
-        for (let i = midPoint + 1; i < points.length; i++) {
-            const current = points[i];
-            const prev = points[i-1];
-            const xc = (current.x + prev.x) / 2 * canvasElement.width;
-            const yc = (current.y + prev.y) / 2 * canvasElement.height;
-            ctx.quadraticCurveTo(
-                prev.x * canvasElement.width,
-                prev.y * canvasElement.height,
-                xc,
-                yc
-            );
-        }
-        ctx.lineTo(points[points.length-1].x * canvasElement.width, 
-                  points[points.length-1].y * canvasElement.height);
-        ctx.closePath();
-        ctx.fillStyle = getBoundaryColor(confidence);
-        ctx.fill();
-    } else {
-        // For eyes and mouth, create a filled area
-        ctx.beginPath();
-        ctx.moveTo(
-            (mode === 'eyes' ? points[0].originalX : points[0].x) * canvasElement.width,
-            (mode === 'eyes' ? points[0].originalY : points[0].y) * canvasElement.height
-        );
-        
-        for (let i = 1; i < points.length; i++) {
-            const current = points[i];
-            const prev = points[i-1];
-            
-            const xc = ((mode === 'eyes' ? current.originalX : current.x) + 
-                      (mode === 'eyes' ? prev.originalX : prev.x)) / 2 * canvasElement.width;
-            const yc = ((mode === 'eyes' ? current.originalY : current.y) + 
-                      (mode === 'eyes' ? prev.originalY : prev.y)) / 2 * canvasElement.height;
-            
-            ctx.quadraticCurveTo(
-                (mode === 'eyes' ? prev.originalX : prev.x) * canvasElement.width,
-                (mode === 'eyes' ? prev.originalY : prev.y) * canvasElement.height,
-                xc,
-                yc
-            );
-        }
-        
-        // Close the path smoothly
-        const lastPoint = points[points.length-1];
-        const firstPoint = points[0];
-        
-        const xc = ((mode === 'eyes' ? firstPoint.originalX : firstPoint.x) + 
-                   (mode === 'eyes' ? lastPoint.originalX : lastPoint.x)) / 2 * canvasElement.width;
-        const yc = ((mode === 'eyes' ? firstPoint.originalY : firstPoint.y) + 
-                   (mode === 'eyes' ? lastPoint.originalY : lastPoint.y)) / 2 * canvasElement.height;
-        
+    // Draw all boundaries using the same smooth path approach
+    ctx.beginPath();
+    ctx.moveTo(points[0].x * canvasElement.width, points[0].y * canvasElement.height);
+    
+    // Draw smooth curve through all points
+    for (let i = 1; i < points.length; i++) {
+        const current = points[i];
+        const prev = points[i-1];
+        const xc = (current.x + prev.x) / 2 * canvasElement.width;
+        const yc = (current.y + prev.y) / 2 * canvasElement.height;
         ctx.quadraticCurveTo(
-            (mode === 'eyes' ? lastPoint.originalX : lastPoint.x) * canvasElement.width,
-            (mode === 'eyes' ? lastPoint.originalY : lastPoint.y) * canvasElement.height,
+            prev.x * canvasElement.width,
+            prev.y * canvasElement.height,
             xc,
             yc
         );
-        
-        ctx.closePath();
-        ctx.fillStyle = getBoundaryColor(confidence);
-        ctx.fill();
     }
+    
+    // Close the path smoothly back to the start
+    const lastPoint = points[points.length-1];
+    const firstPoint = points[0];
+    const xc = (firstPoint.x + lastPoint.x) / 2 * canvasElement.width;
+    const yc = (firstPoint.y + lastPoint.y) / 2 * canvasElement.height;
+    ctx.quadraticCurveTo(
+        lastPoint.x * canvasElement.width,
+        lastPoint.y * canvasElement.height,
+        xc,
+        yc
+    );
+    
+    ctx.closePath();
+    ctx.fillStyle = getBoundaryColor(confidence);
+    ctx.fill();
 }
 
+// [Rest of the code remains unchanged]
 // Handle hands results
 hands.onResults((results) => {
     handResults = results;
@@ -652,5 +578,3 @@ window.addEventListener('resize', updateDimensions);
 camera.start();
 hands.initialize();
 faceMesh.initialize();
-
-
