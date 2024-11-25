@@ -112,10 +112,10 @@ const SCALP_OFFSET = 0.1;
 
 // Function to calculate boundary color based on confidence
 function getBoundaryColor(confidence) {
-    // Start with light green at 50% opacity
-    const baseColor = { r: 0, g: 255, b: 0, a: 0.5 };
-    // Target color is bright red
-    const targetColor = { r: 255, g: 0, b: 0, a: 0.7 };
+    // Start with light green at 25% opacity
+    const baseColor = { r: 0, g: 255, b: 0, a: 0.25 };
+    // Target color is bright red at 25% opacity
+    const targetColor = { r: 255, g: 0, b: 0, a: 0.25 };
     
     // Interpolate between the colors based on confidence
     const r = baseColor.r + (targetColor.r - baseColor.r) * confidence;
@@ -208,7 +208,6 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
             return points;
         }
         case 'scalp': {
-            // Updated scalp indices for better coverage
             const scalpIndices = [
                 10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109
             ];
@@ -226,7 +225,6 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
             return points;
         }
         case 'beard': {
-            // Updated beard indices for better coverage
             const beardIndices = [
                 132, 58, 172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397, 288, 361, 323, 454, 356, 389, 251, 284, 332, 297, 338, 10, 109, 67, 103, 54, 21, 162, 127, 234, 93
             ];
@@ -265,7 +263,12 @@ function getBoundaryPoints(faceLandmarks) {
 function drawBoundaryLines(ctx, points, mode, confidence = 0) {
     if (points.length === 0) return;
 
-    // Draw all boundaries using the same smooth path approach
+    // Set up dashed line style
+    ctx.setLineDash([5, 5]); // 5px dash, 5px gap
+    ctx.lineWidth = 2; // Thin line
+    ctx.strokeStyle = getBoundaryColor(confidence);
+    
+    // Draw the boundary path
     ctx.beginPath();
     ctx.moveTo(points[0].x * canvasElement.width, points[0].y * canvasElement.height);
     
@@ -296,11 +299,10 @@ function drawBoundaryLines(ctx, points, mode, confidence = 0) {
     );
     
     ctx.closePath();
-    ctx.fillStyle = getBoundaryColor(confidence);
-    ctx.fill();
+    ctx.stroke();
+    ctx.setLineDash([]); // Reset line style for other drawings
 }
 
-// [Rest of the code remains unchanged]
 // Handle hands results
 hands.onResults((results) => {
     handResults = results;
@@ -363,9 +365,6 @@ faceMesh.onResults((results) => {
                     pointsByMode[point.mode] = [];
                 }
                 pointsByMode[point.mode].push(point);
-                if (boundaryPoints.connectAcross === false) {
-                    pointsByMode[point.mode].connectAcross = false;
-                }
             });
 
             // Calculate current confidence for coloring
