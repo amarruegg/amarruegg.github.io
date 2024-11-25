@@ -114,8 +114,8 @@ const SCALP_OFFSET = 0.1;
 function getBoundaryColor(confidence) {
     // Start with light green at 25% opacity
     const baseColor = { r: 0, g: 255, b: 0, a: 0.25 };
-    // Target color is bright red at 25% opacity
-    const targetColor = { r: 255, g: 0, b: 0, a: 0.25 };
+    // Target color is bright red at 100% opacity
+    const targetColor = { r: 255, g: 0, b: 0, a: 1.0 };
     
     // Interpolate between the colors based on confidence
     const r = baseColor.r + (targetColor.r - baseColor.r) * confidence;
@@ -182,42 +182,62 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
             });
         }
         case 'eyes': {
-            const eyeIndices = [
-                33, 246, 161, 160, 159, 158, 157, 173, 133, 155, 154, 153, 145, 144, 163, 7,
-                362, 398, 384, 385, 386, 387, 388, 466, 263, 249, 390, 373, 374, 380, 381, 382
+            // Split eyes into left and right groups
+            const leftEyeIndices = [
+                33, 246, 161, 160, 159, 158, 157, 173, 133, 155, 154, 153, 145, 144, 163
             ];
             
-            const points = eyeIndices.map(index => {
+            const rightEyeIndices = [
+                362, 398, 384, 385, 386, 387, 388, 466, 263, 249, 390, 373, 374, 380, 381
+            ];
+            
+            const leftPoints = leftEyeIndices.map(index => {
                 const point = faceLandmarks[index];
                 return {
                     x: point.x,
                     y: point.y,
                     originalX: point.x,
                     originalY: point.y,
-                    mode: 'eyes'
+                    mode: 'eyes',
+                    group: 'left'
                 };
             });
 
-            points.forEach(point => {
+            const rightPoints = rightEyeIndices.map(index => {
+                const point = faceLandmarks[index];
+                return {
+                    x: point.x,
+                    y: point.y,
+                    originalX: point.x,
+                    originalY: point.y,
+                    mode: 'eyes',
+                    group: 'right'
+                };
+            });
+
+            // Apply offset to both eye groups
+            [...leftPoints, ...rightPoints].forEach(point => {
                 const centerX = 0.5;
                 const centerY = 0.5;
                 point.x += (point.x - centerX) * EYE_BOUNDARY_OFFSET;
                 point.y += (point.y - centerY) * EYE_BOUNDARY_OFFSET;
             });
 
-            return points;
+            // Return both groups separately
+            return { leftEye: leftPoints, rightEye: rightPoints };
         }
         case 'scalp': {
+            // Updated scalp indices to only include points from mid-ear and above
             const scalpIndices = [
-                10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109
+                10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365
             ];
 
             const points = scalpIndices.map(index => {
                 const point = faceLandmarks[index];
-                const yOffset = point.y < 0.4 ? -SCALP_OFFSET : 0; // Only offset points above threshold
+                // Always apply the offset for points above the ears
                 return {
                     x: point.x,
-                    y: point.y + yOffset,
+                    y: point.y - SCALP_OFFSET,
                     mode: 'scalp'
                 };
             });
@@ -225,16 +245,16 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
             return points;
         }
         case 'beard': {
+            // Updated beard indices to only include points from mid-ear and below
             const beardIndices = [
-                132, 58, 172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397, 288, 361, 323, 454, 356, 389, 251, 284, 332, 297, 338, 10, 109, 67, 103, 54, 21, 162, 127, 234, 93
+                365, 397, 288, 361, 323, 454, 356, 389, 251, 284, 332, 297, 338
             ];
 
             const points = beardIndices.map(index => {
                 const point = faceLandmarks[index];
-                const yOffset = point.y > 0.6 ? 0.05 : 0; // Only offset points below threshold
                 return {
                     x: point.x,
-                    y: point.y + yOffset,
+                    y: point.y + 0.05, // Consistent offset for beard points
                     mode: 'beard'
                 };
             });
@@ -253,7 +273,12 @@ function getBoundaryPoints(faceLandmarks) {
     const allPoints = [];
     activeModes.forEach(mode => {
         const modePoints = getBoundaryPointsForMode(faceLandmarks, mode);
-        allPoints.push(...modePoints);
+        if (mode === 'eyes') {
+            // Handle separated eye points
+            allPoints.push(...modePoints.leftEye, ...modePoints.rightEye);
+        } else {
+            allPoints.push(...modePoints);
+        }
     });
     
     return allPoints;
@@ -268,7 +293,60 @@ function drawBoundaryLines(ctx, points, mode, confidence = 0) {
     ctx.lineWidth = 2; // Thin line
     ctx.strokeStyle = getBoundaryColor(confidence);
     
-    // Draw the boundary path
+    if (mode === 'eyes') {
+        // Group points by eye
+        const leftEyePoints = points.filter(p => p.group === 'left');
+        const rightEyePoints = points.filter(p => p.group === 'right');
+        
+        // Draw left eye
+        if (leftEyePoints.length > 0) {
+            drawEyeBoundary(ctx, leftEyePoints);
+        }
+        
+        // Draw right eye
+        if (rightEyePoints.length > 0) {
+            drawEyeBoundary(ctx, rightEyePoints);
+        }
+    } else {
+        // Draw other boundaries
+        ctx.beginPath();
+        ctx.moveTo(points[0].x * canvasElement.width, points[0].y * canvasElement.height);
+        
+        // Draw smooth curve through all points
+        for (let i = 1; i < points.length; i++) {
+            const current = points[i];
+            const prev = points[i-1];
+            const xc = (current.x + prev.x) / 2 * canvasElement.width;
+            const yc = (current.y + prev.y) / 2 * canvasElement.height;
+            ctx.quadraticCurveTo(
+                prev.x * canvasElement.width,
+                prev.y * canvasElement.height,
+                xc,
+                yc
+            );
+        }
+        
+        // Close the path smoothly back to the start
+        const lastPoint = points[points.length-1];
+        const firstPoint = points[0];
+        const xc = (firstPoint.x + lastPoint.x) / 2 * canvasElement.width;
+        const yc = (firstPoint.y + lastPoint.y) / 2 * canvasElement.height;
+        ctx.quadraticCurveTo(
+            lastPoint.x * canvasElement.width,
+            lastPoint.y * canvasElement.height,
+            xc,
+            yc
+        );
+        
+        ctx.closePath();
+        ctx.stroke();
+    }
+    
+    ctx.setLineDash([]); // Reset line style for other drawings
+}
+
+// Helper function to draw individual eye boundaries
+function drawEyeBoundary(ctx, points) {
     ctx.beginPath();
     ctx.moveTo(points[0].x * canvasElement.width, points[0].y * canvasElement.height);
     
@@ -300,7 +378,6 @@ function drawBoundaryLines(ctx, points, mode, confidence = 0) {
     
     ctx.closePath();
     ctx.stroke();
-    ctx.setLineDash([]); // Reset line style for other drawings
 }
 
 // Handle hands results
