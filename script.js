@@ -102,7 +102,7 @@ let lastHandDetectionTime = 0;
 let isBoundaryViolation = false;
 let activeModes = new Set();
 let isInitialized = false;
-let currentSound = 'none';
+let currentSound = 'random';
 let isAlertVisible = false;
 
 const HAND_TIMEOUT = 150;
