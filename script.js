@@ -1,3 +1,7 @@
+// Import required modules
+import { FilesetResolver, HandLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js";
+
+// DOM elements
 const videoElement = document.getElementById('input_video');
 const canvasElement = document.getElementById('output_canvas');
 const canvasCtx = canvasElement.getContext('2d');
@@ -390,8 +394,9 @@ function handleHandResults(results) {
     const now = Date.now();
     let maxCurrentConfidence = 0;
     
-    if (results && results.landmarks && results.landmarks.length > 0 && boundaryPoints.length > 0) {
-        for (const landmarks of results.landmarks) {
+    if (results && results.handednesses && results.handednesses.length > 0 && boundaryPoints.length > 0) {
+        for (let i = 0; i < results.handednesses.length; i++) {
+            const landmarks = results.landmarks[i];
             // Convert landmarks to the format expected by calculateFingerFaceConfidence
             const normalizedLandmarks = landmarks.map(landmark => ({
                 x: landmark.x,
@@ -430,7 +435,7 @@ function handleHandResults(results) {
     // Draw hand landmarks
     if (results && results.landmarks) {
         for (const landmarks of results.landmarks) {
-            drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS,
+            drawConnectors(canvasCtx, landmarks, window.HAND_CONNECTIONS,
                 {color: '#8e7af7', lineWidth: 2});
             drawLandmarks(canvasCtx, landmarks, {
                 color: '#8e7af7',
@@ -663,22 +668,28 @@ function resetBoundaryTimer() {
 
 // Initialize everything
 async function initialize() {
-    await createHandLandmarker();
-    
-    const camera = new Camera(videoElement, {
-        onFrame: async () => {
-            await faceMesh.send({image: videoElement});
-        },
-        width: container.offsetWidth,
-        height: container.offsetHeight
-    });
+    try {
+        await createHandLandmarker();
+        
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await faceMesh.send({image: videoElement});
+            },
+            width: container.offsetWidth,
+            height: container.offsetHeight
+        });
 
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
+        updateDimensions();
+        window.addEventListener('resize', updateDimensions);
 
-    camera.start();
-    faceMesh.initialize();
-    predictWebcam();
+        camera.start();
+        faceMesh.initialize();
+        predictWebcam();
+    } catch (error) {
+        console.error('Error initializing:', error);
+        initializationNotice.textContent = 'Error initializing tracking. Please refresh the page.';
+    }
 }
 
+// Start initialization
 initialize();
