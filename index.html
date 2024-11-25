@@ -475,8 +475,63 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
-    <script src="script.js"></script>
+    
+    <!-- Make drawing utilities available globally -->
+    <script>
+        window.HAND_CONNECTIONS = [
+            [0, 1], [1, 2], [2, 3], [3, 4], // Thumb
+            [0, 5], [5, 6], [6, 7], [7, 8], // Index finger
+            [0, 9], [9, 10], [10, 11], [11, 12], // Middle finger
+            [0, 13], [13, 14], [14, 15], [15, 16], // Ring finger
+            [0, 17], [17, 18], [18, 19], [19, 20], // Pinky
+            [5, 9], [9, 13], [13, 17], [0, 17] // Palm
+        ];
+        window.drawConnectors = function(ctx, landmarks, connections, options = {}) {
+            const { color = '#00FF00', lineWidth = 1 } = options;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            
+            for (const [i1, i2] of connections) {
+                const point1 = landmarks[i1];
+                const point2 = landmarks[i2];
+                
+                ctx.beginPath();
+                ctx.moveTo(point1.x * ctx.canvas.width, point1.y * ctx.canvas.height);
+                ctx.lineTo(point2.x * ctx.canvas.width, point2.y * ctx.canvas.height);
+                ctx.stroke();
+            }
+        };
+        window.drawLandmarks = function(ctx, landmarks, options = {}) {
+            const { color = '#FF0000', fillColor = color, lineWidth = 1, radius = 1 } = options;
+            
+            ctx.fillStyle = fillColor;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            
+            for (const point of landmarks) {
+                ctx.beginPath();
+                ctx.arc(
+                    point.x * ctx.canvas.width,
+                    point.y * ctx.canvas.height,
+                    radius,
+                    0,
+                    2 * Math.PI
+                );
+                ctx.fill();
+                ctx.stroke();
+            }
+        };
+    </script>
+
+    <!-- Import MediaPipe Vision modules -->
+    <script type="module">
+        import { FilesetResolver, HandLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js";
+        window.FilesetResolver = FilesetResolver;
+        window.HandLandmarker = HandLandmarker;
+    </script>
+
+    <!-- Load our module script -->
+    <script type="module" src="script.js"></script>
 </body>
 </html>
