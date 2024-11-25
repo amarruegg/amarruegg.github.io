@@ -51,6 +51,8 @@ const audioFiles = [
 ];
 
 let currentRandomAudio = null;
+let handLandmarker = null;
+let lastVideoTime = -1;
 
 // Set initial dimensions
 function updateDimensions() {
@@ -60,26 +62,29 @@ function updateDimensions() {
     videoElement.height = container.offsetHeight;
 }
 
-// Initialize MediaPipe Hands
-const hands = new Hands({
-    locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-    }
-});
+// Initialize HandLandmarker
+async function createHandLandmarker() {
+    const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+    );
+    handLandmarker = await HandLandmarker.createFromOptions(vision, {
+        baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+            delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numHands: 2,
+        minHandDetectionConfidence: 0.5,
+        minHandPresenceConfidence: 0.5,
+        minTrackingConfidence: 0.5
+    });
+}
 
 // Initialize MediaPipe Face Mesh
 const faceMesh = new FaceMesh({
     locateFile: (file) => {
         return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
     }
-});
-
-// Configure hands
-hands.setOptions({
-    maxNumHands: 2,
-    modelComplexity: 1,
-    minDetectionConfidence: 0.5,
-    minTrackingConfidence: 0.5
 });
 
 // Configure face mesh
@@ -152,7 +157,6 @@ soundButtons.forEach(button => {
 
 // Function to play random affirmation audio
 function playRandomAudio() {
-    // Only start new audio if none is currently playing
     if (!currentRandomAudio || currentRandomAudio.ended) {
         const randomIndex = Math.floor(Math.random() * audioFiles.length);
         const audioFile = audioFiles[randomIndex];
@@ -229,7 +233,7 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
         case 'scalp': {
             // Updated scalp indices to only include points from mid-ear and above
             const scalpIndices = [
-                234, 127, 162, 21, 54, 103, 67, 109, 10, 338, 297, 332, 284, 251, 389, 356, 454
+                10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365
             ];
 
             const points = scalpIndices.map(index => {
@@ -242,15 +246,12 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
                 };
             });
 
-            // Don't connect across the face
-            points.connectAcross = false;
             return points;
         }
         case 'beard': {
             // Updated beard indices to only include points from mid-ear and below
             const beardIndices = [
-                234, 93, 132, 58, 172, 136, 150, 149, 176, 148, 152,
-                377, 400, 378, 379, 365, 397, 288, 361, 447
+                365, 397, 288, 361, 323, 454, 356, 389, 251, 284, 332, 297, 338
             ];
 
             const points = beardIndices.map(index => {
@@ -262,8 +263,6 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
                 };
             });
 
-            // Don't connect across the face
-            points.connectAcross = false;
             return points;
         }
         default:
@@ -385,18 +384,22 @@ function drawEyeBoundary(ctx, points) {
     ctx.stroke();
 }
 
-// Handle hands results
-hands.onResults((results) => {
+// Function to handle hand detection results
+function handleHandResults(results) {
     handResults = results;
     const now = Date.now();
     let maxCurrentConfidence = 0;
     
-    if (results.multiHandLandmarks && 
-        results.multiHandLandmarks.length > 0 && 
-        boundaryPoints.length > 0) {
-        
-        for (const landmarks of results.multiHandLandmarks) {
-            const confidence = calculateFingerFaceConfidence(landmarks, boundaryPoints);
+    if (results && results.landmarks && results.landmarks.length > 0 && boundaryPoints.length > 0) {
+        for (const landmarks of results.landmarks) {
+            // Convert landmarks to the format expected by calculateFingerFaceConfidence
+            const normalizedLandmarks = landmarks.map(landmark => ({
+                x: landmark.x,
+                y: landmark.y,
+                z: landmark.z
+            }));
+            
+            const confidence = calculateFingerFaceConfidence(normalizedLandmarks, boundaryPoints);
             maxCurrentConfidence = Math.max(maxCurrentConfidence, confidence);
         }
         
@@ -423,7 +426,34 @@ hands.onResults((results) => {
             resetBoundaryTimer();
         }
     }
-});
+
+    // Draw hand landmarks
+    if (results && results.landmarks) {
+        for (const landmarks of results.landmarks) {
+            drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS,
+                {color: '#8e7af7', lineWidth: 2});
+            drawLandmarks(canvasCtx, landmarks, {
+                color: '#8e7af7',
+                fillColor: '#8e7af7',
+                lineWidth: 1,
+                radius: 2
+            });
+        }
+    }
+}
+
+// Function to process video frame
+async function predictWebcam() {
+    if (!handLandmarker) return;
+    
+    if (videoElement.currentTime !== lastVideoTime) {
+        lastVideoTime = videoElement.currentTime;
+        const handDetectionResults = await handLandmarker.detectForVideo(videoElement, performance.now());
+        handleHandResults(handDetectionResults);
+    }
+    
+    requestAnimationFrame(predictWebcam);
+}
 
 // Handle face mesh results
 faceMesh.onResults((results) => {
@@ -451,8 +481,8 @@ faceMesh.onResults((results) => {
 
             // Calculate current confidence for coloring
             let currentConfidence = 0;
-            if (handResults && handResults.multiHandLandmarks && handResults.multiHandLandmarks.length > 0) {
-                for (const landmarks of handResults.multiHandLandmarks) {
+            if (handResults && handResults.landmarks && handResults.landmarks.length > 0) {
+                for (const landmarks of handResults.landmarks) {
                     const confidence = calculateFingerFaceConfidence(landmarks, boundaryPoints);
                     currentConfidence = Math.max(currentConfidence, confidence);
                 }
@@ -460,19 +490,6 @@ faceMesh.onResults((results) => {
 
             Object.entries(pointsByMode).forEach(([mode, points]) => {
                 drawBoundaryLines(canvasCtx, points, mode, currentConfidence);
-            });
-        }
-    }
-
-    if (handResults && handResults.multiHandLandmarks) {
-        for (const landmarks of handResults.multiHandLandmarks) {
-            drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS,
-                {color: '#8e7af7', lineWidth: 2});
-            drawLandmarks(canvasCtx, landmarks, {
-                color: '#8e7af7',
-                fillColor: '#8e7af7',
-                lineWidth: 1,
-                radius: 2
             });
         }
     }
@@ -644,18 +661,24 @@ function resetBoundaryTimer() {
     hideCountdown();
 }
 
-const camera = new Camera(videoElement, {
-    onFrame: async () => {
-        await hands.send({image: videoElement});
-        await faceMesh.send({image: videoElement});
-    },
-    width: container.offsetWidth,
-    height: container.offsetHeight
-});
+// Initialize everything
+async function initialize() {
+    await createHandLandmarker();
+    
+    const camera = new Camera(videoElement, {
+        onFrame: async () => {
+            await faceMesh.send({image: videoElement});
+        },
+        width: container.offsetWidth,
+        height: container.offsetHeight
+    });
 
-updateDimensions();
-window.addEventListener('resize', updateDimensions);
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
 
-camera.start();
-hands.initialize();
-faceMesh.initialize();
+    camera.start();
+    faceMesh.initialize();
+    predictWebcam();
+}
+
+initialize();
