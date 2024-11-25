@@ -426,6 +426,14 @@ hands.onResults((results) => {
 });
 
 // Handle face mesh results
+// Create and load alert icon
+const alertIcon = new Image();
+alertIcon.src = 'data:image/svg+xml,' + encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="red">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+    </svg>
+`);
+
 faceMesh.onResults((results) => {
     if (!isInitialized && results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
         isInitialized = true;
@@ -466,15 +474,31 @@ faceMesh.onResults((results) => {
 
     if (handResults && handResults.multiHandLandmarks) {
         for (const landmarks of handResults.multiHandLandmarks) {
-            drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS,
-                {color: '#8e7af7', lineWidth: 2});
-            drawLandmarks(canvasCtx, landmarks, {
-                color: '#8e7af7',
-                fillColor: '#8e7af7',
-                lineWidth: 1,
-                radius: 2
+            // Only draw fingertip points (indices 4, 8, 12, 16, 20)
+            const fingertips = [4, 8, 12, 16, 20];
+            fingertips.forEach(index => {
+                const point = landmarks[index];
+                drawLandmarks(canvasCtx, [point], {
+                    color: '#8e7af7',
+                    fillColor: '#8e7af7',
+                    lineWidth: 1,
+                    radius: 4  // Slightly larger radius for better visibility
+                });
             });
         }
+    }
+
+    // Add red alert icon when boundary is violated
+    if (isBoundaryViolation) {
+        const iconSize = 40;
+        const padding = 20;
+        canvasCtx.drawImage(
+            alertIcon,
+            padding,
+            canvasElement.height - iconSize - padding,
+            iconSize,
+            iconSize
+        );
     }
 
     canvasCtx.restore();
