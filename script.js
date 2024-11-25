@@ -229,7 +229,7 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
         case 'scalp': {
             // Updated scalp indices to only include points from mid-ear and above
             const scalpIndices = [
-                10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365
+                234, 127, 162, 21, 54, 103, 67, 109, 10, 338, 297, 332, 284, 251, 389, 356, 454
             ];
 
             const points = scalpIndices.map(index => {
@@ -242,12 +242,15 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
                 };
             });
 
+            // Don't connect across the face
+            points.connectAcross = false;
             return points;
         }
         case 'beard': {
             // Updated beard indices to only include points from mid-ear and below
             const beardIndices = [
-                365, 397, 288, 361, 323, 454, 356, 389, 251, 284, 332, 297, 338
+                234, 93, 132, 58, 172, 136, 150, 149, 176, 148, 152,
+                377, 400, 378, 379, 365, 397, 288, 361, 447
             ];
 
             const points = beardIndices.map(index => {
@@ -259,6 +262,8 @@ function getBoundaryPointsForMode(faceLandmarks, mode) {
                 };
             });
 
+            // Don't connect across the face
+            points.connectAcross = false;
             return points;
         }
         default:
