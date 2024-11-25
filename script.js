@@ -578,7 +578,6 @@ function showAlert() {
         isAlertVisible = true;
         textAlert.style.display = 'block';
         textAlert.offsetHeight;
-        textAlert.classList.add('visible');
         showCountdown();
         
         if (!boundaryTimer && !isNedryShowing) {
