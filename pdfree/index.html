@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDFree</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/text-encoding@0.7.0/lib/encoding.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <span class="material-icons">description</span>
+                <span>PDFree</span>
+            </div>
+            
+            <div class="file-input-wrapper">
+                <label class="upload-btn">
+                    <span class="material-icons">upload_file</span>
+                    <span>Open PDF</span>
+                    <input type="file" id="fileInput" accept=".pdf" />
+                </label>
+            </div>
+
+            <div class="tools-section">
+                <div class="tools-header">Tools</div>
+                <button class="tool-button active" data-tool="select">
+                    <span class="material-icons">near_me</span>
+                    <span>Select</span>
+                </button>
+                <button class="tool-button" data-tool="text">
+                    <span class="material-icons">text_fields</span>
+                    <span>Text</span>
+                </button>
+                <button class="tool-button" data-tool="draw">
+                    <span class="material-icons">brush</span>
+                    <span>Draw</span>
+                </button>
+                <button class="tool-button" data-tool="highlight">
+                    <span class="material-icons">highlight</span>
+                    <span>Highlight</span>
+                </button>
+                <button class="tool-button" data-tool="signature">
+                    <span class="material-icons">draw</span>
+                    <span>Signature</span>
+                </button>
+            </div>
+
+            <div class="color-picker">
+                <label for="markupColor">Color</label>
+                <input type="color" id="markupColor" value="#ff0000">
+                <button id="clearMarkup" class="secondary-button">
+                    <span class="material-icons">clear</span>
+                    Clear Markup
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="page-controls">
+                    <button id="zoomOut" class="icon-button">
+                        <span class="material-icons">zoom_out</span>
+                    </button>
+                    <span id="zoomLevel">100%</span>
+                    <button id="zoomIn" class="icon-button">
+                        <span class="material-icons">zoom_in</span>
+                    </button>
+                </div>
+
+                <div class="document-controls">
+                    <button id="addBlankPage" class="icon-button" data-tooltip="Add Blank Page">
+                        <span class="material-icons">add</span>
+                    </button>
+                    <label class="icon-button" data-tooltip="Merge PDF">
+                        <span class="material-icons">merge_type</span>
+                        <input type="file" id="pageFileInput" accept=".pdf" style="display: none;" />
+                    </label>
+                    <button id="deletePage" class="icon-button" data-tooltip="Delete Page">
+                        <span class="material-icons">delete</span>
+                    </button>
+                    <button id="movePageUp" class="icon-button" data-tooltip="Move Page Up">
+                        <span class="material-icons">arrow_upward</span>
+                    </button>
+                    <button id="movePageDown" class="icon-button" data-tooltip="Move Page Down">
+                        <span class="material-icons">arrow_downward</span>
+                    </button>
+                </div>
+
+                <div class="action-controls">
+                    <select id="pdfQuality" class="quality-select">
+                        <option value="original">Original Quality</option>
+                        <option value="1">Maximum Quality</option>
+                        <option value="0.85">High Quality</option>
+                        <option value="0.65">Medium Quality</option>
+                        <option value="0.45">Low Quality</option>
+                    </select>
+                    <button id="download" class="primary-button">
+                        <span class="material-icons">download</span>
+                        Download
+                    </button>
+                </div>
+            </div>
+
+            <!-- PDF Container -->
+            <div class="pdf-container">
+                <!-- Pages will be dynamically added here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+        <span class="material-icons">search</span>
+        <input type="text" class="search-input" placeholder="Search in PDF...">
+        <div class="search-controls">
+            <span class="search-count">0/0</span>
+            <button class="icon-button" id="prevMatch" data-tooltip="Previous Match">
+                <span class="material-icons">arrow_upward</span>
+            </button>
+            <button class="icon-button" id="nextMatch" data-tooltip="Next Match">
+                <span class="material-icons">arrow_downward</span>
+            </button>
+            <button class="icon-button" id="closeSearch" data-tooltip="Close Search">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Signature Pad -->
+    <div class="signature-pad">
+        <div class="signature-header">
+            <h3>Add Signature</h3>
+            <button id="cancelSignature" class="icon-button">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+        <canvas id="signatureCanvas"></canvas>
+        <div class="signature-controls">
+            <button id="clearSignature" class="secondary-button">Clear</button>
+            <button id="saveSignature" class="primary-button">Save</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
